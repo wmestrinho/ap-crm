@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AP Ops // Absolutely Plausible</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════════════════
+       HEADER / HUD
+  ════════════════════════════════════════════════════ -->
+  <header class="app-header">
+    <div class="header-inner">
+
+      <div class="brand">
+        <img src="assets/ap-logo.png" alt="Absolutely Plausible" class="logo" />
+        <div class="brand-text">
+          <span class="brand-name">AP Ops</span>
+          <span class="brand-sub">Absolutely Plausible</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="sys-status">
+          <span class="sys-dot"></span>
+          SYS_ONLINE
+          <span class="version-badge" id="versionBadge"></span>
+        </div>
+
+        <div class="hud-block">
+          <span class="hud-label">Operator</span>
+          <select id="currentUser" class="hud-select" onchange="setUser(this.value)">
+            <option value="">SELECT_USER</option>
+            <option value="Luiz">Luiz</option>
+            <option value="Bebeco">Bebeco</option>
+            <option value="Samuel">Samuel</option>
+          </select>
+        </div>
+
+        <div class="hud-block">
+          <span class="hud-label">Active Client</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select id="currentClient" class="hud-select" onchange="setClient(this.value)">
+              <option value="">NO_CLIENT</option>
+            </select>
+            <button class="btn-icon" onclick="showModal('addClientModal')" title="New Client">+</button>
+            <button class="btn-icon btn-icon-ghost" onclick="openDeleteClientModal()" title="Delete Selected Client">✕</button>
+          </div>
+        </div>
+
+        <div class="hud-block">
+          <span class="hud-label">Active Project</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select id="currentProject" class="hud-select" onchange="setProject(this.value)">
+              <option value="">NO_PROJECT</option>
+            </select>
+            <button class="btn-icon" onclick="showModal('addProjectModal')" title="New Project">+</button>
+            <button class="btn-icon btn-icon-ghost" onclick="openDeleteProjectModal()" title="Delete Selected Project">✕</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════════════════ -->
+  <main class="container">
+
+    <!-- ── MAIN MENU ───────────────────────────────── -->
+    <div id="mainMenu" class="view active">
+
+      <div class="menu-header">
+        <div class="menu-header-title">AP_OPS_SYSTEM // <span id="menuVersion"></span></div>
+        <div class="menu-header-sub" id="menuStatusLine">[ SELECT OPERATOR, CLIENT AND PROJECT TO BEGIN ]</div>
+      </div>
+
+      <div class="menu-grid">
+
+        <button class="menu-card" onclick="go('logWork')">
+          <div class="card-icon-wrap">
+            <!-- Targeting crosshair / alignment reticle -->
+            <svg class="card-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <circle cx="12" cy="12" r="7"/>
+              <line x1="12" y1="2" x2="12" y2="7"/>
+              <line x1="12" y1="17" x2="12" y2="22"/>
+              <line x1="2" y1="12" x2="7" y2="12"/>
+              <line x1="17" y1="12" x2="22" y2="12"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+            </svg>
+          </div>
+          <div class="card-label">Log Work</div>
+          <div class="card-sub">// Billable work entry</div>
+        </button>
+
+        <button class="menu-card" onclick="go('logExpense')">
+          <div class="card-icon-wrap">
+            <!-- Hexagonal component / cost token -->
+            <svg class="card-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+              <path d="M12 3 L20.5 8 L20.5 16 L12 21 L3.5 16 L3.5 8 Z"/>
+              <path d="M12 8 L16.5 10.5 L16.5 13.5 L12 16 L7.5 13.5 L7.5 10.5 Z"/>
+            </svg>
+          </div>
+          <div class="card-label">Log Expense</div>
+          <div class="card-sub">// Client-billable pass-through</div>
+        </button>
+
+        <button class="menu-card highlight" onclick="go('invoiceBuilder')">
+          <div class="card-icon-wrap">
+            <!-- HUD scan brackets + data lines -->
+            <svg class="card-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M4 9 L4 4 L9 4"/>
+              <path d="M15 4 L20 4 L20 9"/>
+              <path d="M4 15 L4 20 L9 20"/>
+              <path d="M15 20 L20 20 L20 15"/>
+              <line x1="7" y1="9"  x2="17" y2="9"/>
+              <line x1="7" y1="12" x2="17" y2="12"/>
+              <line x1="7" y1="15" x2="13" y2="15"/>
+            </svg>
+          </div>
+          <div class="card-label">Invoice Builder</div>
+          <div class="card-sub">// Generate PDF · Offline-capable</div>
+        </button>
+
+        <button class="menu-card" onclick="go('newCustomer')">
+          <div class="card-icon-wrap">
+            <!-- Profile silhouette with scan brackets -->
+            <svg class="card-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <circle cx="12" cy="9" r="3.5"/>
+              <path d="M4.5 20.5 C4.5 17 8 14.5 12 14.5 C16 14.5 19.5 17 19.5 20.5"/>
+              <path d="M1 5 L1 2 L4 2"/>
+              <path d="M20 2 L23 2 L23 5"/>
+            </svg>
+          </div>
+          <div class="card-label">New Client</div>
+          <div class="card-sub">// Register a client</div>
+        </button>
+
+        <button class="menu-card" onclick="go('newProject')">
+          <div class="card-icon-wrap">
+            <!-- Stacked layers / project folder -->
+            <svg class="card-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3 L21 8 L12 13 L3 8 Z"/>
+              <path d="M3 12 L12 17 L21 12"/>
+              <path d="M3 16 L12 21 L21 16"/>
+            </svg>
+          </div>
+          <div class="card-label">New Project</div>
+          <div class="card-sub">// Add a project under a client</div>
+        </button>
+
+        <button class="menu-card" onclick="go('workCosts')">
+          <div class="card-icon-wrap">
+            <!-- Octagon chip with debit minus -->
+            <svg class="card-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 8.5 L8.5 3 L15.5 3 L21 8.5 L21 15.5 L15.5 21 L8.5 21 L3 15.5 Z"/>
+              <line x1="8" y1="12" x2="16" y2="12"/>
+              <line x1="12" y1="7"  x2="12" y2="9"/>
+              <line x1="12" y1="15" x2="12" y2="17"/>
+            </svg>
+          </div>
+          <div class="card-label">Business Costs</div>
+          <div class="card-sub">// AP overhead · Not client-billable</div>
+        </button>
+
+        <button class="menu-card" onclick="go('clientDashboard')">
+          <div class="card-icon-wrap">
+            <!-- Radar sweep with blip -->
+            <svg class="card-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9"/>
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="12" x2="19.4" y2="6.8"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+              <circle cx="17"  cy="7.5" r="1"   fill="currentColor" stroke="none"/>
+            </svg>
+          </div>
+          <div class="card-label">Client Dashboard</div>
+          <div class="card-sub">// Work · Expenses · Invoiced · Outstanding</div>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ── LOG WORK ────────────────────────────────── -->
+    <div id="logWork" class="view">
+      <div class="view-header">
+        <button class="btn-back" onclick="go('mainMenu')">← BACK</button>
+        <h2>Log Work</h2>
+        <span class="event-badge" id="twClientBadge">NO CLIENT</span>
+      </div>
+
+      <form id="logWorkForm" class="form-card" onsubmit="submitWork(event)">
+        <div class="corner-tl"></div><div class="corner-tr"></div>
+        <div class="corner-bl"></div><div class="corner-br"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Client *</label>
+            <input type="text" name="client" list="clientList" required placeholder="Evolution Kart…" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Project *</label>
+            <input type="text" name="project" list="projectList" required placeholder="Project name…" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Service Type *</label>
+            <select name="serviceType" required onchange="updateServicePrice(this)">
+              <option value="">SELECT_SERVICE</option>
+              <option value="Alignment|75">Alignment</option>
+              <option value="Tuning|65">Tuning</option>
+              <option value="Brake Service|85">Brake Service</option>
+              <option value="Engine Check|90">Engine Check</option>
+              <option value="Tire Change|40">Tire Change</option>
+              <option value="Fuel System Clean|50">Fuel System Clean</option>
+              <option value="Custom / Quoted|0">Custom / Quoted</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Hours / Qty *</label>
+            <input type="number" name="quantity" min="0" step="0.25" value="1" required oninput="updateWorkAmount()" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label id="rateLabel">Rate (USD)</label>
+            <input type="number" name="rate" min="0" step="0.01" value="0" oninput="updateWorkAmount()" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label>Amount</label>
+            <div class="price-display" id="tablePrice">$0.00</div>
+            <input type="hidden" name="amount" id="workAmountHidden" value="0" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" rows="2" placeholder="What was done · Anything relevant…"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Payment Method *</label>
+            <select name="paymentMethod" required>
+              <option value="">SELECT_METHOD</option>
+              <option value="CASH">Cash</option>
+              <option value="VENMO">Venmo</option>
+              <option value="ZELLE">Zelle</option>
+              <option value="CARD">Credit Card / Tap</option>
+              <option value="WIRE">Wire Transfer</option>
+              <option value="INVOICE">Invoice</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Payment Status *</label>
+            <select name="paymentStatus" required>
+              <option value="PAID">Paid</option>
+              <option value="PENDING">Pending</option>
+              <option value="INVOICED">Invoiced</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit">⚡ SAVE ENTRY</button>
+      </form>
+    </div>
+
+    <!-- ── LOG EXPENSE ─────────────────────────────── -->
+    <div id="logExpense" class="view">
+      <div class="view-header">
+        <button class="btn-back" onclick="go('mainMenu')">← BACK</button>
+        <h2>Log Expense</h2>
+        <span class="event-badge" id="pwClientBadge">NO CLIENT</span>
+      </div>
+
+      <form id="logExpenseForm" class="form-card" onsubmit="submitExpense(event)">
+        <div class="corner-tl"></div><div class="corner-tr"></div>
+        <div class="corner-bl"></div><div class="corner-br"></div>
+
+        <p class="modal-warn" style="margin-top:0">
+          Client-billable pass-through costs (materials, software, subcontract).
+          This view is optional / under review.
+        </p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Client *</label>
+            <input type="text" name="client" list="clientList" required placeholder="Client name…" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Project *</label>
+            <input type="text" name="project" list="projectList" required placeholder="Project name…" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Expense Category *</label>
+            <select name="category" required>
+              <option value="">SELECT_CATEGORY</option>
+              <option value="Materials">Materials</option>
+              <option value="Software">Software / Subscriptions</option>
+              <option value="Subcontract">Subcontract</option>
+              <option value="Hardware">Hardware</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Amount (USD) *</label>
+            <input type="number" name="amount" min="0" step="0.01" required placeholder="0.00" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Payment Method *</label>
+            <select name="paymentMethod" required>
+              <option value="">SELECT_METHOD</option>
+              <option value="CASH">Cash</option>
+              <option value="VENMO">Venmo</option>
+              <option value="ZELLE">Zelle</option>
+              <option value="CARD">Credit Card / Tap</option>
+              <option value="INVOICE">Invoice</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Payment Status *</label>
+            <select name="paymentStatus" required>
+              <option value="PAID">Paid</option>
+              <option value="PENDING">Pending</option>
+              <option value="INVOICED">Invoiced</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" rows="2" placeholder="What was the expense for…"></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">⚡ SAVE EXPENSE</button>
+      </form>
+    </div>
+
+    <!-- ── INVOICE BUILDER ─────────────────────────── -->
+    <div id="invoiceBuilder" class="view">
+      <div class="view-header">
+        <button class="btn-back" onclick="go('mainMenu')">← BACK</button>
+        <h2>Invoice Builder</h2>
+        <span class="event-badge" data-static="true">PDF · OFFLINE-CAPABLE</span>
+      </div>
+
+      <!-- Mode toggle -->
+      <div class="invoice-mode-toggle">
+        <button id="modeManual" class="inv-mode-btn active" onclick="setInvoiceMode('manual')">✍ MANUAL</button>
+        <button id="modeEvent"  class="inv-mode-btn"        onclick="setInvoiceMode('client')">⚡ CLIENT MODE</button>
+      </div>
+
+      <!-- Client Mode panel (hidden in manual mode) -->
+      <div id="eventModePanel" class="event-mode-panel">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Pull entries for current client / project</label>
+          <select id="inv_eventorg" onchange="loadEventEntries(this.value)">
+            <option value="">— Select Project —</option>
+          </select>
+        </div>
+        <div id="eventEntriesSummary"></div>
+      </div>
+
+      <div class="form-card">
+        <div class="corner-tl"></div><div class="corner-tr"></div>
+        <div class="corner-bl"></div><div class="corner-br"></div>
+
+        <div class="section-rule">Bill To</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Client *</label>
+            <input type="text" id="inv_org" list="clientList" required placeholder="Client name…" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Contact Name</label>
+            <input type="text" id="inv_contact" placeholder="Owner / Manager" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="inv_email" placeholder="client@example.com" />
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" id="inv_phone" placeholder="+1 …" />
+          </div>
+        </div>
+
+        <div class="section-rule">Invoice Details</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Invoice # *</label>
+            <input type="text" id="inv_number" required placeholder="AP-2026-0227-001" />
+          </div>
+          <div class="form-group">
+            <label>Project</label>
+            <input type="text" id="inv_event" placeholder="Project name" />
+          </div>
+        </div>
+
+        <div class="section-rule">Line Items</div>
+
+        <div class="line-items-header">
+          <span>Description</span>
+          <span style="text-align:center">Qty</span>
+          <span style="text-align:right">Unit $</span>
+          <span style="text-align:right">Total</span>
+          <span></span>
+        </div>
+        <div id="lineItemsList"></div>
+        <button type="button" class="btn-secondary" onclick="addLineItem()" style="width:100%;margin-top:4px">+ ADD LINE ITEM</button>
+
+        <div class="invoice-totals">
+          <div class="total-row">
+            <span>SUBTOTAL</span>
+            <span id="inv_subtotal">$0.00</span>
+          </div>
+          <div class="total-row grand">
+            <span>TOTAL</span>
+            <span id="inv_total">$0.00</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Payment Instructions / Notes</label>
+          <textarea id="inv_notes" rows="2" placeholder="Venmo · Zelle · Wire accepted"></textarea>
+        </div>
+
+        <div class="btn-group">
+          <button type="button" class="btn-submit" onclick="generateInvoicePDF()">📄 GENERATE PDF</button>
+          <button type="button" class="btn-secondary" onclick="saveInvoiceToSheets()">💾 SAVE TO SHEETS</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NEW CLIENT ──────────────────────────────── -->
+    <div id="newCustomer" class="view">
+      <div class="view-header">
+        <button class="btn-back" onclick="go('mainMenu')">← BACK</button>
+        <h2>New Client</h2>
+      </div>
+
+      <form id="newCustomerForm" class="form-card" onsubmit="submitNewCustomer(event)">
+        <div class="corner-tl"></div><div class="corner-tr"></div>
+        <div class="corner-bl"></div><div class="corner-br"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Client Name *</label>
+            <input type="text" name="client" required placeholder="Evolution Kart" />
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" name="homeTrack" placeholder="Orlando, FL" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Contact First Name *</label>
+            <input type="text" name="firstName" required />
+          </div>
+          <div class="form-group">
+            <label>Contact Last Name *</label>
+            <input type="text" name="lastName" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Title</label>
+            <select name="title">
+              <option value="Owner">Owner</option>
+              <option value="Manager">Manager</option>
+              <option value="Partner">Partner</option>
+              <option value="Contact">Contact</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Phone *</label>
+            <input type="tel" name="phone" required placeholder="+1 …" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="client@example.com" />
+        </div>
+
+        <button type="submit" class="btn-submit">⚡ SAVE CLIENT</button>
+      </form>
+    </div>
+
+    <!-- ── NEW PROJECT ─────────────────────────────── -->
+    <div id="newProject" class="view">
+      <div class="view-header">
+        <button class="btn-back" onclick="go('mainMenu')">← BACK</button>
+        <h2>New Project</h2>
+        <span class="event-badge" id="npClientBadge">NO CLIENT</span>
+      </div>
+
+      <form id="newProjectForm" class="form-card" onsubmit="submitNewProject(event)">
+        <div class="corner-tl"></div><div class="corner-tr"></div>
+        <div class="corner-bl"></div><div class="corner-br"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Client *</label>
+            <input type="text" name="client" list="clientList" required placeholder="Evolution Kart" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Project Name *</label>
+            <input type="text" name="project" required placeholder="Website rebuild" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" rows="2" placeholder="Scope / context for this project…"></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">⚡ SAVE PROJECT</button>
+      </form>
+    </div>
+
+    <!-- ── BUSINESS COSTS ──────────────────────────── -->
+    <div id="workCosts" class="view">
+      <div class="view-header">
+        <button class="btn-back" onclick="go('mainMenu')">← BACK</button>
+        <h2>Business Costs</h2>
+        <span class="event-badge" data-static="true">AP OVERHEAD</span>
+      </div>
+
+      <form id="workCostsForm" class="form-card" onsubmit="submitWorkCosts(event)">
+        <div class="corner-tl"></div><div class="corner-tr"></div>
+        <div class="corner-bl"></div><div class="corner-br"></div>
+
+        <p class="modal-warn" style="margin-top:0">
+          AP's own overhead — not client-billable. For AP's books.
+        </p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category *</label>
+            <select name="category" required>
+              <option value="">SELECT_CATEGORY</option>
+              <option value="Software">Software / Subscriptions</option>
+              <option value="Hardware">Hardware</option>
+              <option value="Hosting">Hosting / Domains</option>
+              <option value="Supplies">Supplies</option>
+              <option value="Travel">Travel</option>
+              <option value="Fees">Fees / Banking</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Amount (USD) *</label>
+            <input type="number" name="amount" min="0" step="0.01" required placeholder="0.00" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Paid By</label>
+            <select name="paidBy">
+              <option value="Luiz">Luiz</option>
+              <option value="Bebeco">Bebeco</option>
+              <option value="Samuel">Samuel</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Payment Method *</label>
+            <select name="paymentMethod" required>
+              <option value="CASH">Cash</option>
+              <option value="CARD">Card</option>
+              <option value="VENMO">Venmo</option>
+              <option value="ZELLE">Zelle</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" name="description" placeholder="Optional details…" />
+        </div>
+
+        <button type="submit" class="btn-submit">⚡ LOG COST</button>
+      </form>
+    </div>
+
+    <!-- ── CLIENT DASHBOARD ────────────────────────── -->
+    <div id="clientDashboard" class="view">
+      <div class="view-header">
+        <button class="btn-back" onclick="go('mainMenu')">← BACK</button>
+        <h2>Client Dashboard</h2>
+        <span class="event-badge" id="dashClientBadge">NO CLIENT</span>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="dash-card clickable" data-detail="work" onclick="showDashDetail('work')">
+          <span class="dash-expand">LIST ▶</span>
+          <div class="dash-label">// Work Entries</div>
+          <div class="dash-value" id="dash_tw">—</div>
+        </div>
+        <div class="dash-card clickable" data-detail="expense" onclick="showDashDetail('expense')">
+          <span class="dash-expand">LIST ▶</span>
+          <div class="dash-label">// Expense Entries</div>
+          <div class="dash-value" id="dash_pw">—</div>
+        </div>
+        <div class="dash-card clickable" data-detail="revenue" onclick="showDashDetail('revenue')">
+          <span class="dash-expand">LIST ▶</span>
+          <div class="dash-label">// Billable Total</div>
+          <div class="dash-value green" id="dash_rev">—</div>
+          <div class="dash-split" id="dash_rev_split"></div>
+        </div>
+        <div class="dash-card clickable" data-detail="invoice" onclick="showDashDetail('invoice')">
+          <span class="dash-expand">LIST ▶</span>
+          <div class="dash-label">// Invoiced</div>
+          <div class="dash-value" id="dash_inv">—</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-label">// Paid</div>
+          <div class="dash-value green" id="dash_paid">—</div>
+        </div>
+        <div class="dash-card highlight">
+          <div class="dash-label">// Outstanding</div>
+          <div class="dash-value" id="dash_out">—</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-label">// Active Operators</div>
+          <div class="dash-value small" id="dash_who">—</div>
+        </div>
+      </div>
+
+      <!-- ── Per-project breakdown ────────────────────── -->
+      <div id="projectBreakdown" class="dash-detail" style="display:block">
+        <div class="dash-detail-header">
+          <span class="dash-detail-title">[ PER-PROJECT BREAKDOWN ]</span>
+        </div>
+        <div class="dash-detail-list" id="projectBreakdownList"></div>
+      </div>
+
+      <!-- ── Detail drill-down panel ──────────────────── -->
+      <div id="dashDetail" class="dash-detail">
+        <div class="dash-detail-header">
+          <span class="dash-detail-title" id="dashDetailTitle">—</span>
+          <button class="dash-detail-close" onclick="closeDashDetail()">✕ CLOSE</button>
+        </div>
+        <div class="dash-detail-list" id="dashDetailList"></div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-secondary" onclick="refreshDashboard()">↻ REFRESH DATA</button>
+        <button class="btn-secondary" onclick="exportEventCSV()">⬇ EXPORT CSV</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ════════════════════════════════════════════════════
+       MODAL — New Client
+  ════════════════════════════════════════════════════ -->
+  <div id="addClientModal" class="modal-overlay" onclick="closeModal('addClientModal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>// Create New Client</h3>
+      <div class="form-group">
+        <label>Client Name *</label>
+        <input type="text" id="newClientName" placeholder="Evolution Kart" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" id="newClientLocation" placeholder="Orlando, FL" />
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <input type="text" id="newClientNotes" placeholder="Optional" />
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn-submit" onclick="saveNewClient()" style="margin-top:0">⚡ CREATE</button>
+        <button class="btn-secondary" onclick="closeModal('addClientModal')">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       MODAL — New Project
+  ════════════════════════════════════════════════════ -->
+  <div id="addProjectModal" class="modal-overlay" onclick="closeModal('addProjectModal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>// Create New Project</h3>
+      <p class="modal-warn" id="addProjectClientLine">Project will be added under the selected client.</p>
+      <div class="form-group">
+        <label>Project Name *</label>
+        <input type="text" id="newProjectName" placeholder="Website rebuild" />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="newProjectDesc" placeholder="Optional" />
+      </div>
+      <div class="btn-group">
+        <button class="btn-submit" onclick="saveNewProjectModal()" style="margin-top:0">⚡ CREATE</button>
+        <button class="btn-secondary" onclick="closeModal('addProjectModal')">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       MODAL — Delete Client
+  ════════════════════════════════════════════════════ -->
+  <div id="deleteEventModal" class="modal-overlay" onclick="closeModal('deleteEventModal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>// Delete Client</h3>
+      <p class="modal-warn">
+        Permanently remove <strong id="deleteClientName"></strong> from your client list?
+        All projects and all local entries logged for this client will also be deleted.
+      </p>
+      <div class="btn-group">
+        <button class="btn-submit" onclick="confirmDeleteClient()" style="margin-top:0">⌦ CONFIRM DELETE</button>
+        <button class="btn-secondary" onclick="closeModal('deleteEventModal')">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       MODAL — Delete Project
+  ════════════════════════════════════════════════════ -->
+  <div id="deleteProjectModal" class="modal-overlay" onclick="closeModal('deleteProjectModal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>// Delete Project</h3>
+      <p class="modal-warn">
+        Permanently remove <strong id="deleteProjectName"></strong> from your project list?
+        All local entries logged for this project will also be deleted.
+      </p>
+      <div class="btn-group">
+        <button class="btn-submit" onclick="confirmDeleteProject()" style="margin-top:0">⌦ CONFIRM DELETE</button>
+        <button class="btn-secondary" onclick="closeModal('deleteProjectModal')">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- DATALISTS -->
+  <datalist id="clientList"></datalist>
+  <datalist id="projectList"></datalist>
+
+  <!-- FOOTER -->
+  <footer class="app-footer">
+    <span>Built by <a href="https://absolutelyplausible.com" target="_blank" rel="noopener">Absolutely Plausible</a></span>
+    <span id="footerVersion"></span>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/sheets.js"></script>
+  <script src="js/invoice.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
