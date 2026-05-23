@@ -1,11 +1,11 @@
 /**
- * AP Ops | Absolutely Plausible — Config
+ * AP CRM | Absolutely Plausible — Config
  * Update SHEETS_SCRIPT_URL after deploying Google Apps Script.
  */
 
 const AP = {
   // ── Version (single source of truth) ────────────────────────
-  version: 'v1.2.0 beta',
+  version: 'v1.0.0',
 
   business: {
     name:    'Absolutely Plausible',
@@ -13,67 +13,58 @@ const AP = {
     phone:   '',
     email:   'info@absolutelyplausible.com',
     address: 'Orlando, FL',
-    tagline: 'Operations & Invoicing',
+    tagline: 'Customer Relationship Management',
     instagram: '@absolutelyplausible',
   },
 
   // ── Google Apps Script Web App URL ──────────────────────────
-  // After deploying Apps Script, paste the URL here:
+  // Shared with AP Ops (same backend, same Google Sheet)
   SHEETS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzT2qCIlQYv8BArw6OGlqWsRrdMQsCjFobUBf7rSdzmwFzJnoMPO0-JhC5TIfmxihMq/exec',
 
-  // ── Team members (operator attribution — "logged by") ───────
+  // ── Team members (user attribution) ───────
   team: ['Luiz', 'Bebeco', 'Samuel'],
 
-  // ── Services ─────────────────────────────────────────────────
-  // Common karting services with default rates (can be overridden per-entry)
-  // Format: 'Service Name|default_rate' (rate used for Hourly, ignored for Custom)
-  pricing: {
-    'Alignment': 75.0,
-    'Tuning': 65.0,
-    'Brake Service': 85.0,
-    'Engine Check': 90.0,
-    'Tire Change': 40.0,
-    'Fuel System Clean': 50.0,
-    'Custom / Quoted': 0.0
-  },
+  // ── Opportunity Stages ─────────────────────────────────────
+  opportunityStages: [
+    'Prospecting',
+    'Qualification',
+    'Needs Analysis',
+    'Value Proposition',
+    'Id. Decision Makers',
+    'Perception Analysis',
+    'Proposal/Price Quote',
+    'Negotiation/Review',
+    'Closed Won',
+    'Closed Lost'
+  ],
 
-  // ── Templates ────────────────────────────────────────────────
-  // Predefined work/expense bundles for common events or services
-  // Each template can contain work and expense entries
+  // ── Activity Types ─────────────────────────────────────────
+  activityTypes: [
+    'Call',
+    'Meeting',
+    'Email',
+    'Task',
+    'Other'
+  ],
+
+  // ── Lead Status ─────────────────────────────────────────────
+  leadStatus: [
+    'New',
+    'Attempted Contact',
+    'Open',
+    'Qualified',
+    'Unqualified',
+    'Converted'
+  ],
+
+  // ── Templates (example) ─────────────────────────────────────
   templates: [
     {
-      name: 'Race Weekend Setup',
-      description: 'Full kart preparation for a race weekend',
-      work: [
-        { serviceName: 'Engine Check', quantity: 1, rate: 90, description: 'Comprehensive engine inspection and tune-up' },
-        { serviceName: 'Alignment', quantity: 1, rate: 75, description: 'Front and rear alignment' },
-        { serviceName: 'Brake Service', quantity: 1, rate: 85, description: 'Pad replacement, rotor check, bleed' },
-        { serviceName: 'Tire Change', quantity: 2, rate: 40, description: 'Mount and balance new slicks' }
-      ],
-      expenses: [
-        { category: 'Materials', amount: 120, description: 'Two sets of slick tires' },
-        { category: 'Materials', amount: 45, description: 'Brake pads and hardware' }
+      name: 'Initial Contact',
+      description: 'First outreach to a new lead',
+      activity: [
+        { type: 'Call', subject: 'Introduction call', description: 'Introduce our services' }
       ]
-    },
-    {
-      name: 'Monthly Maintenance',
-      description: 'Routine monthly kart upkeep',
-      work: [
-        { serviceName: 'Tuning', quantity: 1, rate: 65, description: 'Carburetor, clutch, chain adjustment' },
-        { serviceName: 'Fuel System Clean', quantity: 1, rate: 50, description: 'Clean fuel lines, filter, tank' }
-      ],
-      expenses: [
-        { category: 'Materials', amount: 30, description: 'New fuel filter and lines' }
-      ]
-    },
-    {
-      name: 'Track Day Support',
-      description: 'On-track support and adjustments',
-      work: [
-        { serviceName: 'Tuning', quantity: 2, rate: 65, description: 'Between-session adjustments' },
-        { serviceName: 'Engine Check', quantity: 1, rate: 90, description: 'Post-session inspection' }
-      ],
-      expenses: []
     }
   ]
 };
@@ -81,12 +72,16 @@ const AP = {
 // ── App state (in-memory, persisted to localStorage) ───────────
 const STATE = {
   currentUser:    localStorage.getItem('ap_user')             || '',
-  currentClient:  localStorage.getItem('ap_client')           || '',
-  currentProject: localStorage.getItem('ap_project')          || '',
-  clients:        JSON.parse(localStorage.getItem('ap_clients')        || '[]'),
-  projects:       JSON.parse(localStorage.getItem('ap_projects')       || '[]'),
-  localEntries:   JSON.parse(localStorage.getItem('ap_local_entries')  || '[]'),
-  localClients:   JSON.parse(localStorage.getItem('ap_local_clients')  || '[]'),
+  currentAccount: localStorage.getItem('ap_account')          || '',
+  currentContact: localStorage.getItem('ap_contact')          || '',
+  currentOpportunity: localStorage.getItem('ap_opportunity')  || '',
+  currentLead:    localStorage.getItem('ap_lead')             || '',
+
+  accounts:       JSON.parse(localStorage.getItem('ap_accounts')       || '[]'),
+  contacts:       JSON.parse(localStorage.getItem('ap_contacts')       || '[]'),
+  leads:          JSON.parse(localStorage.getItem('ap_leads')          || '[]'),
+  opportunities:  JSON.parse(localStorage.getItem('ap_opportunities')  || '[]'),
+  activities:     JSON.parse(localStorage.getItem('ap_activities')     || '[]'),
 };
 
 function setUser(val) {
@@ -95,54 +90,117 @@ function setUser(val) {
   if (typeof updateMenuStatus === 'function') updateMenuStatus();
 }
 
-function setClient(val) {
-  STATE.currentClient = val;
-  localStorage.setItem('ap_client', val);
-  // Selecting a client invalidates the current project unless it
-  // still belongs to this client.
-  const proj = STATE.projects.find(p => p.name === STATE.currentProject && p.client === val);
-  if (!proj) setProject('');
-  if (typeof renderProjectSelect === 'function') renderProjectSelect();
-  updateClientBadges();
+function setAccount(val) {
+  STATE.currentAccount = val;
+  localStorage.setItem('ap_account', val);
+  // Selecting an account may affect related contacts/opportunities
+  if (typeof renderContactSelect === 'function') renderContactSelect();
+  if (typeof renderOpportunitySelect === 'function') renderOpportunitySelect();
+  updateAccountBadges();
   if (typeof updateMenuStatus === 'function') updateMenuStatus();
 }
 
-function setProject(val) {
-  STATE.currentProject = val;
-  localStorage.setItem('ap_project', val);
-  updateClientBadges();
+function setContact(val) {
+  STATE.currentContact = val;
+  localStorage.setItem('ap_contact', val);
+  updateContactBadges();
   if (typeof updateMenuStatus === 'function') updateMenuStatus();
 }
 
-function updateClientBadges() {
-  const label = STATE.currentClient
-    ? STATE.currentClient + (STATE.currentProject ? ` / ${STATE.currentProject}` : '')
-    : 'No client selected';
+function setOpportunity(val) {
+  STATE.currentOpportunity = val;
+  localStorage.setItem('ap_opportunity', val);
+  updateOpportunityBadges();
+  if (typeof updateMenuStatus === 'function') updateMenuStatus();
+}
+
+function setLead(val) {
+  STATE.currentLead = val;
+  localStorage.setItem('ap_lead', val);
+  if (typeof updateMenuStatus === 'function') updateMenuStatus();
+}
+
+function updateAccountBadges() {
+  const label = STATE.currentAccount
+    ? STATE.currentAccount + (STATE.currentContact ? ` / ${STATE.currentContact}` : '')
+    : 'No account selected';
   document.querySelectorAll('.event-badge').forEach(el => {
-    // Leave static info badges (e.g. invoice builder) untouched
     if (el.dataset.static === 'true') return;
     el.textContent = label;
   });
-  const sel = document.getElementById('inv_event');
-  if (sel && !sel.value) sel.value = STATE.currentProject;
+  const sel = document.getElementById('opp_account');
+  if (sel && !sel.value) sel.value = STATE.currentAccount;
 }
 
-function saveClients() {
-  localStorage.setItem('ap_clients', JSON.stringify(STATE.clients));
+function updateContactBadges() {
+  const label = STATE.currentContact
+    ? STATE.currentContact + (STATE.currentAccount ? ` @ ${STATE.currentAccount}` : '')
+    : 'No contact selected';
+  document.querySelectorAll('.event-badge').forEach(el => {
+    if (el.dataset.static === 'true') return;
+    el.textContent = label;
+  });
 }
 
-function saveProjects() {
-  localStorage.setItem('ap_projects', JSON.stringify(STATE.projects));
+function updateOpportunityBadges() {
+  const label = STATE.currentOpportunity
+    ? STATE.currentOpportunity + (STATE.currentAccount ? ` (${STATE.currentAccount})` : '')
+    : 'No opportunity selected';
+  document.querySelectorAll('.event-badge').forEach(el => {
+    if (el.dataset.static === 'true') return;
+    el.textContent = label;
+  });
 }
 
-function saveLocalEntry(entry) {
-  STATE.localEntries.push({ ...entry, savedAt: new Date().toISOString() });
-  localStorage.setItem('ap_local_entries', JSON.stringify(STATE.localEntries));
+function saveAccounts() {
+  localStorage.setItem('ap_accounts', JSON.stringify(STATE.accounts));
 }
 
-function saveLocalClient(name) {
-  if (name && !STATE.localClients.includes(name)) {
-    STATE.localClients.push(name);
-    localStorage.setItem('ap_local_clients', JSON.stringify(STATE.localClients));
+function saveContacts() {
+  localStorage.setItem('ap_contacts', JSON.stringify(STATE.contacts));
+}
+
+function saveLeads() {
+  localStorage.setItem('ap_leads', JSON.stringify(STATE.leads));
+}
+
+function saveOpportunities() {
+  localStorage.setItem('ap_opportunities', JSON.stringify(STATE.opportunities));
+}
+
+function saveActivities() {
+  localStorage.setItem('ap_activities', JSON.stringify(STATE.activities));
+}
+
+function saveLocalActivity(activity) {
+  STATE.activities.push({ ...activity, savedAt: new Date().toISOString() });
+  localStorage.setItem('ap_activities', JSON.stringify(STATE.activities));
+}
+
+function saveLocalAccount(account) {
+  if (account && !STATE.accounts.some(a => a.name === account.name)) {
+    STATE.accounts.push(account);
+    localStorage.setItem('ap_accounts', JSON.stringify(STATE.accounts));
+  }
+}
+
+function saveLocalContact(contact) {
+  if (contact && !STATE.contacts.some(c => c.name === contact.name)) {
+    STATE.contacts.push(contact);
+    localStorage.setItem('ap_contacts', JSON.stringify(STATE.contacts));
+  }
+}
+
+function saveLocalLead(lead) {
+  if (lead && !STATE.leads.some(l => l.name === lead.name)) {
+    STATE.leads.push(lead);
+    localStorage.setItem('ap_leads', JSON.stringify(STATE.leads));
+  }
+}
+
+function saveLocalOpportunity(opportunity) {
+  if (opportunity && !STATE.opportunities.some(o => o.name === opportunity.name)) {
+    STATE.opportunities.push(opportunity);
+    localStorage.setItem('ap_opportunities', JSON.stringify(STATE.opportunities));
   }
 }
