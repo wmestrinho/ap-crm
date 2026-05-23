@@ -1,25 +1,22 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with this repository.
 
 ## Project
 
-**AP Ops** — Absolutely Plausible's internal operations & invoicing app. The foundation was copied from the `hackFatura` app and re-themed to the AP brand (cool watercolour palette, Share Tech Mono). Pure static HTML/CSS/JS — no build step, no npm.
+**AP CRM** — Absolutely Plausible's customer relationship management app. Manages the full sales pipeline: leads, contacts, accounts, opportunities, and activities. Pure static HTML/CSS/JS — no build step, no npm.
 
 ## Domain model
 
-The app is organized around **Clients**. Each Client has one or more **Projects**. Every work / expense / invoice entry belongs to a Client + Project.
+The app is organized around **Accounts** (companies/organizations). Each Account has one or more **Contacts** and **Opportunities**.
 
-- **Log Work** — billable work: service (`Hourly` or `Custom`), description, qty × rate = amount, payment status
-- **Log Expense** — client-billable pass-through costs (optional view, kept under review)
-- **Business Costs** — AP's own overhead, not client-billable
-- **Invoice Builder** — generates client invoices, `AP-YYYY-MMDD-001` format
-- **New Client** / **New Project** — add clients and projects
-- **Client Dashboard** — per-client totals + per-project breakdown
-
-Services are deliberately minimal: `Hourly` (rate × qty) and `Custom` (flat quoted amount). Entry types: `work`, `expense`, `cost`, `invoice`.
-
-(Foundation was copied from the karting app `hackFatura` and fully retailored to this model in v1.2.0.)
+- **Leads** — potential prospects before qualification (`New`, `Attempted Contact`, `Open`, `Qualified`, `Unqualified`, `Converted`)
+- **Accounts** — companies/organizations that AP works with or targets
+- **Contacts** — people at accounts (name, role, email, phone)
+- **Opportunities** — potential deals in the sales pipeline
+  - Stages: `Prospecting` → `Qualification` → `Needs Analysis` → `Value Proposition` → `Id. Decision Makers` → `Perception Analysis` → `Proposal/Price Quote` → `Negotiation/Review` → `Closed Won` / `Closed Lost`
+- **Activities** — interactions with contacts/leads (`Call`, `Meeting`, `Email`, `Task`, `Other`)
+- **Templates** — pre-built activity sequences for common sales motions
 
 ## Dev Server
 
@@ -31,7 +28,7 @@ Serves the app at `http://localhost:5500` with no-cache headers. The app is pure
 
 ## Deployment
 
-Target: **`ops.absolutelyplausible.com`** (Absolutely Plausible's internal operations & invoicing app). Pure static — deploy via Cloudflare Pages with no build command, output directory `/`. `server.py` is local dev only. The Cloudflare Pages project + DNS + (optional) Access gate are set up in the Cloudflare dashboard.
+Target: **`crm.absolutelyplausible.com`** (Absolutely Plausible's CRM). Pure static — deploy via Cloudflare Pages with no build command, output directory `/`. `server.py` is local dev only. The Cloudflare Pages project + DNS + (optional) Access gate are set up in the Cloudflare dashboard.
 
 ## Version Bumping
 
@@ -49,58 +46,48 @@ Single-page application. All views live in `index.html` as `<div class="view">` 
 **JS load order matters** (all via `<script>` tags in `index.html`):
 1. `js/config.js` — `AP` config object + `STATE` (in-memory, backed by localStorage) + persistence helpers
 2. `js/sheets.js` — Google Sheets API layer
-3. `js/invoice.js` — jsPDF invoice generator (client-side only)
-4. `js/app.js` — all UI logic, form handlers, dashboard, invoice dual mode, CSV export, entry delete/toggle
+3. `js/app.js` — all UI logic, form handlers, dashboard, activity logging
 
 **Data flow:**
-- Every form submit: saves to `STATE.localEntries` (localStorage) first, then fires-and-forgets to Google Sheets
-- Dashboard reads exclusively from `STATE.localEntries` — fully offline
-- Sheets writes are GET requests to work around CORS/redirect limitations; responses are opaque from the browser
+- Every form submit: saves to `STATE` (localStorage) first, then fires-and-forgets to Google Sheets
+- Dashboard reads exclusively from `STATE` — fully offline
+- Sheets writes are GET requests to work around CORS/redirect limitations
 
-**Views (`<div class="view">` IDs):** `mainMenu`, `logWork`, `logExpense`, `invoiceBuilder`, `newCustomer` (New Client), `newProject`, `workCosts` (Business Costs), `clientDashboard`
+**Views (`<div class="view">` IDs):** `mainMenu`, `logActivity`, `logExpense`, `invoiceBuilder`, `newCustomer`, `newProject`, `workCosts`, `clientDashboard`
+
+Note: The domain model defines CRM entities (accounts, contacts, leads, opportunities, activities) but the current views are carried over from the AP Ops app foundation. The CRM-specific views (lead list, opportunity pipeline, contact management) are yet to be built. The data layer in `js/config.js` already supports the full CRM model — the UI needs to catch up.
 
 ## localStorage Keys
 
 | Key | Contents |
 |-----|----------|
 | `ap_user` | current operator name |
-| `ap_client` | current client name |
-| `ap_project` | current project name |
-| `ap_clients` | client list — `[{name, location, notes}]` |
-| `ap_projects` | project list — `[{client, name, description}]` |
-| `ap_local_entries` | all submissions — `{type, client, project, org, amount, loggedBy, paymentStatus, savedAt, ...}` |
-| `ap_local_clients` | client name list for datalist autocomplete |
-
-Entry types: `'work'`, `'expense'`, `'cost'`, `'invoice'`
-
-## Key Patterns
-
-**Adding a new form type:**
-1. Add a view in `index.html`
-2. Add a `submit*` handler in `js/app.js` that calls `saveLocalEntry({ type: '...', ... })`
-3. Add an appender function in `google-apps-script/Code.gs`
-4. Register the action in `doGet`/`doPost` handlers in `Code.gs`
-
-**Services:** the work-service select offers two `<option>`s, hardcoded in `index.html` as `value="Service|0"` — `Hourly` and `Custom`. The amount is entered per-entry (rate × qty for Hourly, a flat quoted amount for Custom). `AP.pricing` in `config.js` is intentionally empty — config-driven pricing can come later if the service list grows.
-
-**Payment status values:** `'PAID'`, `'PENDING'`, `'INVOICED'` — always uppercase, stored as-is from form `<option value="">`.
-
-**Invoice number format:** `AP-YYYY-MMDD-001` — generated by `generateInvoiceNumber()` in `app.js`, auto-increments based on today's saved invoices in `STATE.localEntries`.
-
-**Entry identification:** entries use `savedAt` (ISO timestamp) as a unique key for delete/edit operations in the drill-down panel.
+| `ap_account` | current account name |
+| `ap_contact` | current contact name |
+| `ap_opportunity` | current opportunity name |
+| `ap_lead` | current lead name |
+| `ap_accounts` | account list |
+| `ap_contacts` | contact list |
+| `ap_leads` | lead list |
+| `ap_opportunities` | opportunity list |
+| `ap_activities` | activity log entries |
+| `ap_local_entries` | legacy Ops entries (work/expense/cost/invoice) |
+| `ap_clients` | legacy client list |
+| `ap_projects` | legacy project list |
+| `ap_local_clients` | legacy client autocomplete list |
 
 ## Google Apps Script Backend
 
 `google-apps-script/Code.gs` is the authoritative source. To deploy changes:
 
 1. Copy the full file contents
-2. Go to [script.google.com](https://script.google.com), open the project, paste and replace all
+2. Go to [script.google.com](https://script.google.com), open the project, paste and replace
 3. Create a **New Deployment** (always new — never redeploy existing)
 4. Copy the new URL into `AP.SHEETS_SCRIPT_URL` in `js/config.js`
 
-Spreadsheet ID: `SPREADSHEET_ID` in `Code.gs` is currently empty — configure AP's own Google Sheet when wiring the backend. `AP.SHEETS_SCRIPT_URL` in `config.js` is also currently empty.
+`AP.SHEETS_SCRIPT_URL` in `config.js` is currently empty — configure AP's own Google Sheet when wiring the backend.
 
-Sheet tabs: `Clients` and `Projects` are global. Each client gets four per-client tabs: `{Client}_Work`, `{Client}_Expenses`, `{Client}_Costs`, `{Client}_Invoices`.
+Sheet tabs: `Leads`, `Accounts`, `Contacts`, `Opportunities`, `Activities`.
 
 ## Assets
 
