@@ -78,16 +78,20 @@ Note: The domain model defines CRM entities (accounts, contacts, leads, opportun
 
 ## Google Apps Script Backend
 
-`google-apps-script/Code.gs` is the authoritative source. To deploy changes:
+The AP CRM shares the same Apps Script backend and Google Sheet as AP Ops (mech.robotfantome.com). Both apps write to the same spreadsheet via the same deployed Web App.
 
-1. Copy the full file contents
+To deploy changes to the shared backend:
+
+1. Copy the full `Code.gs` contents
 2. Go to [script.google.com](https://script.google.com), open the project, paste and replace
 3. Create a **New Deployment** (always new — never redeploy existing)
-4. Copy the new URL into `AP.SHEETS_SCRIPT_URL` in `js/config.js`
+4. Copy the new URL into `AP.SHEETS_SCRIPT_URL` in **both** `ap-crm/js/config.js` AND `absolutely-plausible-ops/js/config.js`
 
-`AP.SHEETS_SCRIPT_URL` in `config.js` is currently empty — configure AP's own Google Sheet when wiring the backend.
+`SPREADSHEET_ID` in `Code.gs` points to AP's shared Google Sheet.
 
-Sheet tabs: `Leads`, `Accounts`, `Contacts`, `Opportunities`, `Activities`.
+Sheet tabs: `Clients`, `Projects` are global. Each client gets four per-client tabs: `{Client}_Work`, `{Client}_Expenses`, `{Client}_Costs`, `{Client}_Invoices`.
+
+Note: The CRM-specific entities (Accounts, Contacts, Leads, Opportunities, Activities) are defined in `js/config.js` but don't yet have corresponding Apps Script handlers. Until those are added, only the Ops-origin entities (Clients, Projects, Work, Expenses, Costs, Invoices) are persisted to Sheets.
 
 ## Assets
 
