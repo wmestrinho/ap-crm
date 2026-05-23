@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Absolutely Plausible — Full Architecture Overview</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    .header { margin-bottom: 1.5rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot {
+      width: 12px; height: 12px; background: #22d3ee; border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 2.25rem; }
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 1rem; border: 1px solid #1e293b;
+      padding: 1.5rem; overflow-x: auto;
+    }
+    svg { width: 100%; min-width: 1200px; display: block; }
+    .cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem; margin-top: 1.5rem;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem; border: 1px solid #1e293b; padding: 1.25rem;
+    }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card-dot.orange { background: #fb923c; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.375rem; }
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.75rem; }
+    .section-label {
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Absolutely Plausible — Full Architecture Overview</h1>
+      </div>
+      <p class="subtitle">All systems, sites, repos, infrastructure, and team — unified operations map</p>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1300 1050">
+        <!-- ========== DEFS ========== -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <marker id="arrow-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+          </marker>
+          <marker id="arrow-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
+          </marker>
+          <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa" />
+          </marker>
+          <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
+          </marker>
+          <marker id="arrow-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb923c" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background Grid -->
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- ============================================================ -->
+        <!-- ROW 0: TEAM / USERS                                          -->
+        <!-- ============================================================ -->
+        <!-- Team Label -->
+        <rect x="20" y="20" width="80" height="50" rx="6" fill="rgba(30,41,59,0.5)" stroke="#475569" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="60" y="40" fill="#94a3b8" font-size="7" font-weight="600" text-anchor="middle" letter-spacing="0.05em">TEAM</text>
+        <text x="60" y="52" fill="#94a3b8" font-size="6" text-anchor="middle" letter-spacing="0.05em">(USERS)</text>
+
+        <!-- Luiz (Orlando) -->
+        <rect x="130" y="15" width="130" height="60" rx="6" fill="rgba(120,53,15,0.2)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="195" y="42" fill="white" font-size="10" font-weight="600" text-anchor="middle">Luiz</text>
+        <text x="195" y="56" fill="#94a3b8" font-size="7" text-anchor="middle">Orlando, FL</text>
+        <text x="195" y="66" fill="#fbbf24" font-size="6" text-anchor="middle">Founder / Ops / Dev</text>
+
+        <!-- Bebeco (Brasilia) -->
+        <rect x="280" y="15" width="130" height="60" rx="6" fill="rgba(120,53,15,0.2)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="345" y="42" fill="white" font-size="10" font-weight="600" text-anchor="middle">Bebeco</text>
+        <text x="345" y="56" fill="#94a3b8" font-size="7" text-anchor="middle">Brasília, DF</text>
+        <text x="345" y="66" fill="#fbbf24" font-size="6" text-anchor="middle">Ops Oversight / Advisor</text>
+
+        <!-- Samuel (Brasilia) -->
+        <rect x="430" y="15" width="130" height="60" rx="6" fill="rgba(120,53,15,0.2)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="495" y="42" fill="white" font-size="10" font-weight="600" text-anchor="middle">Samuel</text>
+        <text x="495" y="56" fill="#94a3b8" font-size="7" text-anchor="middle">Brasília, DF</text>
+        <text x="495" y="66" fill="#fbbf24" font-size="6" text-anchor="middle">Future Contributor</text>
+
+        <!-- Hermes Agent (AI) -->
+        <rect x="580" y="15" width="130" height="60" rx="6" fill="rgba(76,29,149,0.2)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="645" y="42" fill="white" font-size="10" font-weight="600" text-anchor="middle">Hermes / OWL</text>
+        <text x="645" y="56" fill="#94a3b8" font-size="7" text-anchor="middle">AI Agent (local)</text>
+        <text x="645" y="66" fill="#a78bfa" font-size="6" text-anchor="middle">Automation / Coding</text>
+
+        <!-- Public Users -->
+        <rect x="730" y="15" width="130" height="60" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="795" y="42" fill="white" font-size="10" font-weight="600" text-anchor="middle">Public Users</text>
+        <text x="795" y="56" fill="#94a3b8" font-size="7" text-anchor="middle">robotfantome.com</text>
+        <text x="795" y="66" fill="#94a3b8" font-size="7" text-anchor="middle">absolutelyplausible.com</text>
+
+        <!-- Devices -->
+        <rect x="20" y="90" width="120" height="45" rx="4" fill="rgba(30,41,59,0.5)" stroke="#475569" stroke-width="1"/>
+        <text x="80" y="107" fill="#94a3b8" font-size="6" letter-spacing="0.05em" text-anchor="middle">DEVICES</text>
+        <text x="80" y="120" fill="#94a3b8" font-size="7" text-anchor="middle">macOS · iOS · Browser</text>
+
+        <!-- Local Dev Machine -->
+        <rect x="160" y="90" width="120" height="45" rx="4" fill="rgba(6,78,59,0.3)" stroke="#34d399" stroke-width="1"/>
+        <text x="220" y="107" fill="#34d399" font-size="7" text-anchor="middle" font-weight="600">Local Dev Machine</text>
+        <text x="220" y="122" fill="#94a3b8" font-size="6" text-anchor="middle">python3 server.py :5500</text>
+
+        <!-- Git Repos -->
+        <rect x="300" y="90" width="200" height="45" rx="4" fill="rgba(76,29,149,0.2)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="400" y="107" fill="#a78bfa" font-size="7" text-anchor="middle" font-weight="600">Git Repos (GitHub)</text>
+        <text x="400" y="122" fill="#94a3b8" font-size="6" text-anchor="middle">github.com/wmestrinho/* + org/*</text>
+
+        <!-- ============================================================ -->
+        <!-- CLOUDFLARE NETWORK REGION                                    -->
+        <!-- ============================================================ -->
+        <rect x="20" y="155" width="1260" height="250" rx="12" fill="rgba(251,191,36,0.03)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="32" y="170" fill="#fbbf24" font-size="8" font-weight="600">CLOUDFLARE NETWORK</text>
+        <text x="180" y="170" fill="#94a3b8" font-size="6">DNS · CDN · Pages · Access · Full (Strict) SSL</text>
+
+        <!-- Cloudflare DNS -->
+        <rect x="40" y="185" width="140" height="55" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="110" y="207" fill="white" font-size="9" font-weight="600" text-anchor="middle">Cloudflare DNS</text>
+        <text x="110" y="220" fill="#94a3b8" font-size="6" text-anchor="middle">Domain Management</text>
+        <text x="110" y="232" fill="#94a3b8" font-size="6" text-anchor="middle">CNAME + A Records</text>
+
+        <!-- Cloudflare CDN -->
+        <rect x="200" y="185" width="140" height="55" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="270" y="207" fill="white" font-size="9" font-weight="600" text-anchor="middle">Cloudflare CDN</text>
+        <text x="270" y="220" fill="#94a3b8" font-size="6" text-anchor="middle">Global Edge Network</text>
+        <text x="270" y="232" fill="#94a3b8" font-size="6" text-anchor="middle">Caching + Asset Delivery</text>
+
+        <!-- Cloudflare Access -->
+        <rect x="360" y="185" width="140" height="55" rx="6" fill="rgba(136,19,55,0.3)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="430" y="207" fill="white" font-size="9" font-weight="600" text-anchor="middle">Cloudflare Access</text>
+        <text x="430" y="220" fill="#94a3b8" font-size="6" text-anchor="middle">Zero Trust Auth</text>
+        <text x="430" y="232" fill="#94a3b8" font-size="6" text-anchor="middle">Email-based Policies</text>
+
+        <!-- Cloudflare Pages -->
+        <rect x="520" y="185" width="140" height="55" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="590" y="207" fill="white" font-size="9" font-weight="600" text-anchor="middle">Cloudflare Pages</text>
+        <text x="590" y="220" fill="#94a3b8" font-size="6" text-anchor="middle">CI/CD: Auto-build on push</text>
+        <text x="590" y="232" fill="#94a3b8" font-size="6" text-anchor="middle">Build: mkdocs build / static</text>
+
+        <!-- GitHub Pages -->
+        <rect x="680" y="185" width="140" height="55" rx="6" fill="rgba(120,53,15,0.15)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="750" y="207" fill="white" font-size="9" font-weight="600" text-anchor="middle">GitHub Pages</text>
+        <text x="750" y="220" fill="#94a3b8" font-size="6" text-anchor="middle">Legacy hosting for</text>
+        <text x="750" y="232" fill="#94a3b8" font-size="6" text-anchor="middle">robotfantome.com (alt)</text>
+
+        <!-- ============================================================ -->
+        <!-- PUBLIC SITES ROW                                             -->
+        <!-- ============================================================ -->
+        <rect x="20" y="255" width="60" height="145" rx="4" fill="rgba(30,41,59,0.5)" stroke="#475569" stroke-width="1"/>
+        <text x="50" y="300" fill="#94a3b8" font-size="6" letter-spacing="0.05em" text-anchor="middle" transform="rotate(-90, 50, 340)">PUBLIC SITES</text>
+
+        <!-- robotfantome.com -->
+        <rect x="100" y="270" width="185" height="100" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="192" y="300" fill="white" font-size="9" font-weight="600" text-anchor="middle">robotfantome.com</text>
+        <text x="192" y="314" fill="#22d3ee" font-size="6" text-anchor="middle">Frontend (Static)</text>
+        <text x="192" y="327" fill="#94a3b8" font-size="6" text-anchor="middle">HTML / CSS / JS / Cloudflare Pages</text>
+        <text x="192" y="340" fill="#94a3b8" font-size="6" text-anchor="middle">7 tabs: Overview, Music, About, AP ...</text>
+        <text x="192" y="356" fill="#fbbf24" font-size="6" text-anchor="middle">NO Access gate (open)</text>
+
+        <!-- absolutelyplausible.com -->
+        <rect x="305" y="270" width="185" height="100" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="397" y="300" fill="white" font-size="9" font-weight="600" text-anchor="middle">absolutelyplausible.com</text>
+        <text x="397" y="314" fill="#22d3ee" font-size="6" text-anchor="middle">Public Website (MkDocs)</text>
+        <text x="397" y="327" fill="#94a3b8" font-size="6" text-anchor="middle">Company Site: Services + Brand + Contact</text>
+        <text x="397" y="340" fill="#94a3b8" font-size="6" text-anchor="middle">Home = AP Ops App (2026-05+)</text>
+        <text x="397" y="356" fill="#fbbf24" font-size="6" text-anchor="middle">NO Access gate (open)</text>
+
+        <!-- ============================================================ -->
+        <!-- INTERNAL SITES ROW                                           -->
+        <!-- ============================================================ -->
+        <rect x="510" y="255" width="60" height="145" rx="4" fill="rgba(30,41,59,0.5)" stroke="#475569" stroke-width="1"/>
+        <text x="540" y="295" fill="#fb7185" font-size="6" letter-spacing="0.05em" text-anchor="middle" transform="rotate(-90, 540, 345)">INTERNAL SITES (GATED)</text>
+
+        <!-- team.robotfantome.com -->
+        <rect x="590" y="270" width="170" height="100" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="675" y="300" fill="white" font-size="9" font-weight="600" text-anchor="middle">team.robotfantome.com</text>
+        <text x="675" y="314" fill="#22d3ee" font-size="6" text-anchor="middle">Dream Team Workspace (MkDocs)</text>
+        <text x="675" y="327" fill="#94a3b8" font-size="6" text-anchor="middle">Bilingual EN + pt-BR</text>
+        <text x="675" y="340" fill="#94a3b8" font-size="6" text-anchor="middle">Members, Playbook, Projects</text>
+        <text x="675" y="356" fill="#fb7185" font-size="6" text-anchor="middle">Cloudflare Access (planned)</text>
+
+        <!-- plan.robotfantome.com -->
+        <rect x="780" y="270" width="170" height="100" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="865" y="300" fill="white" font-size="9" font-weight="600" text-anchor="middle">plan.robotfantome.com</text>
+        <text x="865" y="314" fill="#22d3ee" font-size="6" text-anchor="middle">Business Plan + Ops Dashboard</text>
+        <text x="865" y="327" fill="#94a3b8" font-size="6" text-anchor="middle">FINANCIALS + STRATEGY + TIMELINE</text>
+        <text x="865" y="340" fill="#94a3b8" font-size="6" text-anchor="middle">Interactive checklists, Mermaid</text>
+        <text x="865" y="356" fill="#fb7185" font-size="6" text-anchor="middle">Cloudflare Access (planned)</text>
+
+        <!-- mech.robotfantome.com -->
+        <rect x="970" y="270" width="170" height="100" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="1055" y="300" fill="white" font-size="9" font-weight="600" text-anchor="middle">mech.robotfantome.com</text>
+        <text x="1055" y="314" fill="#34d399" font-size="6" text-anchor="middle">AP Ops — Operations & Invoicing</text>
+        <text x="1055" y="327" fill="#94a3b8" font-size="6" text-anchor="middle">SPA: static HTML/CSS/JS</text>
+        <text x="1055" y="340" fill="#94a3b8" font-size="6" text-anchor="middle">Log Work, Expenses, Invoices</text>
+        <text x="1055" y="356" fill="#fb7185" font-size="6" text-anchor="middle">Cloudflare Access (planned)</text>
+
+        <!-- ============================================================ -->
+        <!-- APPS ROW                                                     -->
+        <!-- ============================================================ -->
+        <rect x="510" y="430" width="60" height="155" rx="4" fill="rgba(30,41,59,0.5)" stroke="#475569" stroke-width="1"/>
+        <text x="540" y="470" fill="#34d399" font-size="6" letter-spacing="0.05em" text-anchor="middle" transform="rotate(-90, 540, 530)">APPS / SUBDOMAINS</text>
+
+        <!-- ops.absolutelyplausible.com -->
+        <rect x="590" y="440" width="170" height="100" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="675" y="470" fill="white" font-size="9" font-weight="600" text-anchor="middle">ops.absolutelyplausible.com</text>
+        <text x="675" y="484" fill="#34d399" font-size="6" text-anchor="middle">AP Ops Invoicing App</text>
+        <text x="675" y="497" fill="#94a3b8" font-size="6" text-anchor="middle">Cloudflare Pages (static, no build)</text>
+        <text x="675" y="510" fill="#94a3b8" font-size="6" text-anchor="middle">SPA: Client/Project/Invoice Mgmt</text>
+        <text x="675" y="526" fill="#fb7185" font-size="6" text-anchor="middle">Cloudflare Access (planned)</text>
+
+        <!-- crm.absolutelyplausible.com -->
+        <rect x="780" y="440" width="170" height="100" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="865" y="470" fill="white" font-size="9" font-weight="600" text-anchor="middle">crm.absolutelyplausible.com</text>
+        <text x="865" y="484" fill="#34d399" font-size="6" text-anchor="middle">AP CRM (v1.0.0)</text>
+        <text x="865" y="497" fill="#94a3b8" font-size="6" text-anchor="middle">Cloudflare Pages deployed</text>
+        <text x="865" y="510" fill="#94a3b8" font-size="6" text-anchor="middle">Opportunities + Client Relations</text>
+        <text x="865" y="526" fill="#fb7185" font-size="6" text-anchor="middle">Cloudflare Access (planned)</text>
+
+        <!-- wgz-dashboard (planned) -->
+        <rect x="970" y="440" width="170" height="100" rx="6" fill="rgba(30,41,59,0.3)" stroke="#475569" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="1055" y="470" fill="#94a3b8" font-size="9" font-weight="600" text-anchor="middle">dashboard.* (planned)</text>
+        <text x="1055" y="484" fill="#94a3b8" font-size="6" text-anchor="middle">Personal Dashboard (wgz-dashboard)</text>
+        <text x="1055" y="497" fill="#94a3b8" font-size="6" text-anchor="middle">Local dev / planned</text>
+        <text x="1055" y="510" fill="#94a3b8" font-size="6" text-anchor="middle">Scorecards, Metrics, Pipeline</text>
+        <text x="1055" y="526" fill="#475569" font-size="6" text-anchor="middle">NOT YET DEPLOYED</text>
+
+        <!-- ============================================================ -->
+        <!-- DATA / BACKEND REGION                                        -->
+        <!-- ============================================================ -->
+        <rect x="20" y="590" width="480" height="200" rx="12" fill="rgba(76,29,149,0.03)" stroke="#a78bfa" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="32" y="605" fill="#a78bfa" font-size="8" font-weight="600">DATA & BACKEND SERVICES</text>
+        <text x="180" y="605" fill="#94a3b8" font-size="6">GCP / Google Workspace</text>
+
+        <!-- Google Sheets -->
+        <rect x="40" y="620" width="160" height="140" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="120" y="650" fill="white" font-size="10" font-weight="600" text-anchor="middle">Google Sheets</text>
+        <text x="120" y="665" fill="#a78bfa" font-size="6" text-anchor="middle">Primary Database</text>
+        <text x="120" y="680" fill="#94a3b8" font-size="6" text-anchor="middle">Tabs per client:</text>
+        <text x="120" y="692" fill="#94a3b8" font-size="6" text-anchor="middle">Work / Expenses / Costs</text>
+        <text x="120" y="704" fill="#94a3b8" font-size="6" text-anchor="middle">Invoices / Clients / Projects</text>
+        <text x="120" y="720" fill="#94a3b8" font-size="6" text-anchor="middle">Used by: AP Ops + AP CRM</text>
+        <text x="120" y="736" fill="#fbbf24" font-size="6" text-anchor="middle">Status: Connected (AP Ops)</text>
+
+        <!-- Google Apps Script -->
+        <rect x="220" y="620" width="160" height="140" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="300" y="650" fill="white" font-size="10" font-weight="600" text-anchor="middle">Apps Script (Gosu)</text>
+        <text x="300" y="665" fill="#a78bfa" font-size="6" text-anchor="middle">Backend API Layer</text>
+        <text x="300" y="680" fill="#94a3b8" font-size="6" text-anchor="middle">doGet / doPost handlers</text>
+        <text x="300" y="692" fill="#94a3b8" font-size="6" text-anchor="middle">GET requests → Sheets API</text>
+        <text x="300" y="704" fill="#94a3b8" font-size="6" text-anchor="middle">CORS workaround via GET</text>
+        <text x="300" y="720" fill="#94a3b8" font-size="6" text-anchor="middle">Deploy: new version each time</text>
+        <text x="300" y="736" fill="#fbbf24" font-size="6" text-anchor="middle">Status: Deployed (AP Ops)</text>
+
+        <!-- localStorage -->
+        <rect x="400" y="620" width="80" height="140" rx="6" fill="rgba(76,29,149,0.2)" stroke="#a78bfa" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="440" y="660" fill="white" font-size="8" font-weight="600" text-anchor="middle">local</text>
+        <text x="440" y="672" fill="white" font-size="8" font-weight="600" text-anchor="middle">Storage</text>
+        <text x="440" y="688" fill="#94a3b8" font-size="5.5" text-anchor="middle">Browser-based</text>
+        <text x="440" y="700" fill="#94a3b8" font-size="5.5" text-anchor="middle">offline-first</text>
+        <text x="440" y="712" fill="#94a3b8" font-size="5.5" text-anchor="middle">cache layer</text>
+        <text x="440" y="724" fill="#94a3b8" font-size="5.5" text-anchor="middle">ap_local_entries</text>
+        <text x="440" y="736" fill="#94a3b8" font-size="5.5" text-anchor="middle">ap_clients</text>
+        <text x="440" y="748" fill="#94a3b8" font-size="5.5" text-anchor="middle">ap_projects</text>
+
+        <!-- ============================================================ -->
+        <!-- WORKSPACE / REPOS REGION                                     -->
+        <!-- ============================================================ -->
+        <rect x="520" y="590" width="760" height="200" rx="12" fill="rgba(251,146,60,0.03)" stroke="#fb923c" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="532" y="605" fill="#fb923c" font-size="8" font-weight="600">WORKSPACE / REPOSITORIES (.openclaw/workspace/)</text>
+
+        <!-- Workspace Core -->
+        <rect x="540" y="620" width="160" height="155" rx="6" fill="rgba(251,146,60,0.15)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="620" y="645" fill="white" font-size="9" font-weight="600" text-anchor="middle">Workspace Core</text>
+        <text x="620" y="660" fill="#fb923c" font-size="6" text-anchor="middle">AGENTS.md / SOUL.md</text>
+        <text x="620" y="672" fill="#94a3b8" font-size="6" text-anchor="middle">USER.md / MEMORY.md</text>
+        <text x="620" y="684" fill="#94a3b8" font-size="6" text-anchor="middle">TOOLS.md / IDENTITY.md</text>
+        <text x="620" y="696" fill="#94a3b8" font-size="6" text-anchor="middle">PROJECT-RULES.md</text>
+        <text x="620" y="708" fill="#94a3b8" font-size="6" text-anchor="middle">HEARTBEAT.md</text>
+        <text x="620" y="724" fill="#fb923c" font-size="6" text-anchor="middle">ops/ pipeline.md</text>
+        <text x="620" y="736" fill="#fb923c" font-size="6" text-anchor="middle">ops/ metrics.md</text>
+        <text x="620" y="748" fill="#fb923c" font-size="6" text-anchor="middle">memory/ daily logs</text>
+        <text x="620" y="760" fill="#fb923c" font-size="6" text-anchor="middle">glober/ Obsidian vault</text>
+
+        <!-- content/ -->
+        <rect x="720" y="620" width="130" height="80" rx="6" fill="rgba(251,146,60,0.15)" stroke="#fb923c" stroke-width="1"/>
+        <text x="785" y="645" fill="white" font-size="8" font-weight="600" text-anchor="middle">content/</text>
+        <text x="785" y="660" fill="#94a3b8" font-size="6" text-anchor="middle">LinkedIn drafts</text>
+        <text x="785" y="672" fill="#94a3b8" font-size="6" text-anchor="middle">Newsletter issues</text>
+        <text x="785" y="684" fill="#94a3b8" font-size="6" text-anchor="middle">YouTube scripts</text>
+
+        <!-- projects/ -->
+        <rect x="870" y="620" width="390" height="155" rx="6" fill="rgba(251,146,60,0.15)" stroke="#fb923c" stroke-width="1"/>
+        <text x="1065" y="645" fill="white" font-size="9" font-weight="600" text-anchor="middle">projects/ (Active Repos)</text>
+        <text x="900" y="665" fill="#22d3ee" font-size="6" text-anchor="middle">robot-fantome</text>
+        <text x="900" y="677" fill="#94a3b8" font-size="5.5" text-anchor="middle">robotfantome.com</text>
+        <text x="900" y="689" fill="#94a3b8" font-size="5.5" text-anchor="middle">Cl Wrl Pages</text>
+        <text x="900" y="701" fill="#94a3b8" font-size="5.5" text-anchor="middle">v: static</text>
+
+        <text x="1000" y="665" fill="#22d3ee" font-size="6" text-anchor="middle">ap-team-workspace</text>
+        <text x="1000" y="677" fill="#94a3b8" font-size="5.5" text-anchor="middle">team.robotfantome.com</text>
+        <text x="1000" y="689" fill="#94a3b8" font-size="5.5" text-anchor="middle">CF Pages + Access</text>
+        <text x="1000" y="701" fill="#94a3b8" font-size="5.5" text-anchor="middle">v0.6.0 beta</text>
+
+        <text x="1115" y="665" fill="#22d3ee" font-size="6" text-anchor="middle">absolutelyplausible-business-plan</text>
+        <text x="1115" y="677" fill="#94a3b8" font-size="5.5" text-anchor="middle">plan.robotfantome.com</text>
+        <text x="1115" y="689" fill="#94a3b8" font-size="5.5" text-anchor="middle">CF Pages + Access</text>
+        <text x="1115" y="701" fill="#94a3b8" font-size="5.5" text-anchor="middle">v0.15.0 beta</text>
+
+        <text x="900" y="725" fill="#34d399" font-size="6" text-anchor="middle">absolutely-plausible-ops</text>
+        <text x="900" y="737" fill="#94a3b8" font-size="5.5" text-anchor="middle">mech.robotfantome.com</text>
+        <text x="900" y="749" fill="#94a3b8" font-size="5.5" text-anchor="middle">CF Pages + Access (planned)</text>
+        <text x="900" y="761" fill="#94a3b8" font-size="5.5" text-anchor="middle">v1.2.0 beta</text>
+
+        <text x="1000" y="725" fill="#34d399" font-size="6" text-anchor="middle">ap-crm</text>
+        <text x="1000" y="737" fill="#94a3b8" font-size="5.5" text-anchor="middle">crm.absolutelyplausible.com</text>
+        <text x="1000" y="749" fill="#94a3b8" font-size="5.5" text-anchor="middle">Cloudflare Pages deployed</text>
+        <text x="1000" y="761" fill="#94a3b8" font-size="5.5" text-anchor="middle">v1.0.0</text>
+
+        <text x="1115" y="725" fill="#22d3ee" font-size="6" text-anchor="middle">absolutelyplausible-website</text>
+        <text x="1115" y="737" fill="#94a3b8" font-size="5.5" text-anchor="middle">absolutelyplausible.com</text>
+        <text x="1115" y="749" fill="#94a3b8" font-size="5.5" text-anchor="middle">CF Pages / MkDocs</text>
+        <text x="1115" y="761" fill="#94a3b8" font-size="5.5" text-anchor="middle">+ wgz-dashboard (planned)</text>
+
+        <!-- ============================================================ -->
+        <!-- DOMAIN MAPS                                                  -->
+        <!-- ============================================================ -->
+        <rect x="20" y="810" width="620" height="95" rx="8" fill="rgba(30,41,59,0.3)" stroke="#475569" stroke-width="1"/>
+        <text x="32" y="825" fill="#94a3b8" font-size="7" font-weight="600">DOMAIN MAP</text>
+        <text x="32" y="840" fill="#22d3ee" font-size="6">robotfantome.com</text>
+        <text x="32" y="850" fill="#94a3b8" font-size="5.5">├── team.robotfantome.com (Dream Team Workspace)</text>
+        <text x="32" y="860" fill="#94a3b8" font-size="5.5">├── plan.robotfantome.com (Business Plan Dashboard)</text>
+        <text x="32" y="870" fill="#94a3b8" font-size="5.5">├── mech.robotfantome.com (AP Ops App)</text>
+        <text x="32" y="880" fill="#94a3b8" font-size="5.5">└── evolution-kart-workspace (client, separate)</text>
+        <text x="340" y="840" fill="#22d3ee" font-size="6">absolutelyplausible.com</text>
+        <text x="340" y="850" fill="#94a3b8" font-size="5.5">├── www (redirect)</text>
+        <text x="340" y="860" fill="#94a3b8" font-size="5.5">├── ops.absolutelyplausible.com (AP Ops v1.2.0)</text>
+        <text x="340" y="870" fill="#94a3b8" font-size="5.5">├── crm.absolutelyplausible.com (AP CRM v1.0.0)</text>
+        <text x="340" y="880" fill="#94a3b8" font-size="5.5">└── dashboard.* (planned)</text>
+
+        <!-- ============================================================ -->
+        <!-- TECH STACK SUMMARY                                           -->
+        <!-- ============================================================ -->
+        <rect x="660" y="810" width="620" height="95" rx="8" fill="rgba(30,41,59,0.3)" stroke="#475569" stroke-width="1"/>
+        <text x="672" y="825" fill="#94a3b8" font-size="7" font-weight="600">TECH STACK SUMMARY</text>
+        <text x="672" y="840" fill="#22d3ee" font-size="6">Frontend: Static HTML/CSS/JS · MkDocs Material · No npm/bundler</text>
+        <text x="672" y="852" fill="#34d399" font-size="6">Backend: Google Apps Script (Gosu) · Google Sheets API</text>
+        <text x="672" y="864" fill="#a78bfa" font-size="6">Data: Google Sheets (primary) · localStorage (offline cache) · CSV export</text>
+        <text x="672" y="876" fill="#fbbf24" font-size="6">Infra: Cloudflare (DNS + CDN + Pages + Access) · GitHub Pages (legacy)</text>
+        <text x="672" y="888" fill="#fb923c" font-size="6">Tools: Python 3 · pygount · JetBrains Mono · Share Tech Mono · Mermaid</text>
+
+        <!-- ============================================================ -->
+        <!-- DEPLOYMENT PIPELINE                                          -->
+        <!-- ============================================================ -->
+        <rect x="20" y="925" width="1260" height="60" rx="8" fill="rgba(30,41,59,0.3)" stroke="#475569" stroke-width="1"/>
+        <text x="32" y="940" fill="#94a3b8" font-size="7" font-weight="600">DEPLOYMENT PIPELINE</text>
+        <!-- Code -->
+        <rect x="40" y="950" width="80" height="25" rx="4" fill="rgba(76,29,149,0.3)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="80" y="965" fill="white" font-size="7" text-anchor="middle">git push</text>
+        <!-- Arrow -->
+        <line x1="120" y1="962" x2="150" y2="962" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+        <!-- CF Pages Build -->
+        <rect x="150" y="950" width="110" height="25" rx="4" fill="rgba(120,53,15,0.2)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="205" y="965" fill="white" font-size="6" text-anchor="middle">CF Pages Build</text>
+        <!-- Arrow -->
+        <line x1="260" y1="962" x2="290" y2="962" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+        <!-- CDN Deploy -->
+        <rect x="290" y="950" width="100" height="25" rx="4" fill="rgba(120,53,15,0.2)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="340" y="965" fill="white" font-size="6" text-anchor="middle">CDN Deploy</text>
+        <!-- Arrow -->
+        <line x1="390" y1="962" x2="420" y2="962" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+        <!-- HTTPS -->
+        <rect x="420" y="950" width="100" height="25" rx="4" fill="rgba(8,51,68,0.3)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="470" y="965" fill="white" font-size="6" text-anchor="middle">HTTPS (Strict)</text>
+        <!-- Arrow -->
+        <line x1="520" y1="962" x2="550" y2="962" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+        <!-- Access Check -->
+        <rect x="550" y="950" width="110" height="25" rx="4" fill="rgba(136,19,55,0.2)" stroke="#fb7185" stroke-width="1"/>
+        <text x="605" y="965" fill="white" font-size="6" text-anchor="middle">Access Check</text>
+        <!-- Arrow -->
+        <line x1="660" y1="962" x2="690" y2="962" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+        <!-- Local Dev -->
+        <rect x="690" y="950" width="120" height="25" rx="4" fill="rgba(6,78,59,0.2)" stroke="#34d399" stroke-width="1"/>
+        <text x="750" y="965" fill="white" font-size="6" text-anchor="middle">Local Dev (:5500)</text>
+        <!-- Arrow -->
+        <line x1="810" y1="962" x2="840" y2="962" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-violet)"/>
+        <!-- Sync -->
+        <rect x="840" y="950" width="140" height="25" rx="4" fill="rgba(76,29,149,0.2)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="910" y="965" fill="white" font-size="6" text-anchor="middle">Sheets ↔ localStorage</text>
+        <!-- Apps Script -->
+        <line x1="980" y1="962" x2="1010" y2="962" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-violet)"/>
+        <rect x="1010" y="950" width="130" height="25" rx="4" fill="rgba(76,29,149,0.2)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="1075" y="965" fill="white" font-size="6" text-anchor="middle">Apps Script API</text>
+
+        <!-- ========== ARROWS ========== -->
+
+        <!-- Team → DNS -->
+        <line x1="345" y1="75" x2="110" y2="185" stroke="#fbbf24" stroke-width="1" marker-end="url(#arrow-amber)" stroke-dasharray="4,4"/>
+        <line x1="195" y1="75" x2="110" y2="185" stroke="#fbbf24" stroke-width="1" marker-end="url(#arrow-amber)"/>
+        <line x1="495" y1="75" x2="430" y2="185" stroke="#fbbf24" stroke-width="1" marker-end="url(#arrow-amber)" stroke-dasharray="4,4"/>
+        <line x1="645" y1="75" x2="590" y2="185" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="795" y1="75" x2="750" y2="185" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrow-amber)"/>
+
+        <!-- Dev Machine → Repos -->
+        <line x1="280" y1="112" x2="300" y2="112" stroke="#a78bfa" stroke-width="1" marker-end="url(#arrow-violet)"/>
+
+        <!-- DNS → CDN -->
+        <line x1="180" y1="212" x2="200" y2="212" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+        <!-- CDN → Pages -->
+        <line x1="340" y1="212" x2="520" y2="212" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+        <!-- DNS → Access -->
+        <line x1="180" y1="212" x2="360" y2="212" stroke="#fb7185" stroke-width="1" stroke-dasharray="4,4"/>
+
+        <!-- Pages → Public Sites -->
+        <line x1="397" y1="270" x2="397" y2="240" stroke="#22d3ee" stroke-width="1" marker-end="url(#arrow-cyan)"/>
+        <line x1="192" y1="270" x2="192" y2="240" stroke="#22d3ee" stroke-width="1" marker-end="url(#arrow-cyan)"/>
+        <line x1="750" y1="240" x2="750" y2="185" stroke="#fbbf24" stroke-width="1" marker-end="url(#arrow-amber)"/>
+
+        <!-- Pages → Internal Sites -->
+        <line x1="675" y1="270" x2="675" y2="240" stroke="#22d3ee" stroke-width="1" marker-end="url(#arrow-cyan)"/>
+        <line x1="865" y1="270" x2="865" y2="240" stroke="#22d3ee" stroke-width="1" marker-end="url(#arrow-cyan)"/>
+        <line x1="1055" y1="270" x2="1055" y2="240" stroke="#34d399" stroke-width="1" marker-end="url(#arrow-emerald)"/>
+
+        <!-- Apps → Internal -->
+        <line x1="675" y1="440" x2="675" y2="405" stroke="#34d399" stroke-width="1" marker-end="url(#arrow-emerald)"/>
+        <line x1="865" y1="440" x2="865" y2="405" stroke="#34d399" stroke-width="1" marker-end="url(#arrow-emerald)"/>
+
+        <!-- Apps → Data -->
+        <line x1="675" y1="540" x2="120" y2="620" stroke="#a78bfa" stroke-width="1" marker-end="url(#arrow-violet)" stroke-dasharray="4,4"/>
+        <line x1="865" y1="540" x2="300" y2="620" stroke="#a78bfa" stroke-width="1" marker-end="url(#arrow-violet)" stroke-dasharray="4,4"/>
+
+        <!-- Backend → Apps Script -->
+        <line x1="120" y1="760" x2="220" y2="690" stroke="#a78bfa" stroke-width="1" marker-end="url(#arrow-violet)"/>
+
+        <!-- localStorage → Apps -->
+        <line x1="440" y1="620" x2="440" y2="580" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- Hermes → Workspace -->
+        <line x1="645" y1="75" x2="620" y2="620" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- Workspace → Repos (implicit) -->
+        <line x1="870" y1="700" x2="510" y2="700" stroke="#fb923c" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- Access → Internal Sites -->
+        <line x1="430" y1="240" x2="675" y2="270" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="430" y1="240" x2="865" y2="270" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="430" y1="240" x2="1055" y2="270" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- ========== LEGEND ========== -->
+        <text x="20" y="1010" fill="white" font-size="7" font-weight="600">Legend</text>
+        <rect x="20" y="1018" width="14" height="10" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="38" y="1026" fill="#94a3b8" font-size="6">Static Site / MkDocs</text>
+        <rect x="140" y="1018" width="14" height="10" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="158" y="1026" fill="#94a3b8" font-size="6">Web Application (SPA)</text>
+        <rect x="300" y="1018" width="14" height="10" rx="2" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="318" y="1026" fill="#94a3b8" font-size="6">Cloudflare Service</text>
+        <rect x="440" y="1018" width="14" height="10" rx="2" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="458" y="1026" fill="#94a3b8" font-size="6">Data / Backend</text>
+        <rect x="560" y="1018" width="14" height="10" rx="2" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="578" y="1026" fill="#94a3b8" font-size="6">Security / Auth</text>
+        <rect x="690" y="1018" width="14" height="10" rx="2" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1"/>
+        <text x="708" y="1026" fill="#94a3b8" font-size="6">Workspace / Repo</text>
+        <rect x="820" y="1018" width="14" height="10" rx="2" fill="rgba(30,41,59,0.3)" stroke="#475569" stroke-width="1"/>
+        <text x="838" y="1026" fill="#94a3b8" font-size="6">Planned / Future</text>
+      </svg>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Domains & Routing</h3>
+        </div>
+        <ul>
+          <li>• Two domain families: robotfantome.com + absolutelyplausible.com</li>
+          <li>• All DNS managed in Cloudflare (proxied)</li>
+          <li>• Full (Strict) SSL + Always HTTPS + Auto HTTPS Rewrites</li>
+          <li>• robotfantome.com → public sites (no Access)</li>
+          <li>• Internal subdomains on both families → Cloudflare Pages</li>
+          <li>• CNAME files in each repo root for custom domain mapping</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>Security Model</h3>
+        </div>
+        <ul>
+          <li>• Cloudflare Access = zero-trust email-based auth</li>
+          <li>• Public sites: open (robotfantome.com, absolutelyplausible.com)</li>
+          <li>• Internal sites: Access-gated (team, plan, mech, ops, crm)</li>
+          <li>• Team: Luiz + Bebeco + Samuel email allowlist</li>
+          <li>• Each internal subdomain = separate Access application</li>
+          <li>• Status: Access policies still being configured</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>Application Layer</h3>
+        </div>
+        <ul>
+          <li>• AP Ops (mech / ops subdomain): v1.2.0 beta — invoicing SPA</li>
+          <li>• AP CRM (crm subdomain): v1.0.0 — client relations</li>
+          <li>• Both: pure static HTML/CSS/JS, no build step</li>
+          <li>• Data: localStorage (offline-first) → Google Sheets sync</li>
+          <li>• Invoice format: AP-YYYY-MMDD-001</li>
+          <li>• Dashboard (wgz-dashboard): planned, not yet deployed</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>Documentation Sites</h3>
+        </div>
+        <ul>
+          <li>• team.robotfantome.com: Dream Team workspace (EN + pt-BR)</li>
+          <li>• plan.robotfantome.com: Business plan + financials + strategy</li>
+          <li>• absolutelyplausible.com: Public company website</li>
+          <li>• All use MkDocs Material with Share Tech Mono</li>
+          <li>• Auto-deploy via Cloudflare Pages on git push</li>
+          <li>• Interactive: Mermaid diagrams, task lists, checklists</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>Data Architecture</h3>
+        </div>
+        <ul>
+          <li>• Google Sheets = single source of truth for all business data</li>
+          <li>• Apps Script (Gosu) = REST API layer (GET-based for CORS)</li>
+          <li>• localStorage = offline-first browser cache</li>
+          <li>• Write path: form submit → localStorage → fire-and-forget to Sheets</li>
+          <li>• Read path: dashboard reads localStorage only (fully offline)</li>
+          <li>• CSV export available for data portability</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot orange"></div>
+          <h3>Workspace & Automation</h3>
+        </div>
+        <ul>
+          <li>• .openclaw/workspace/ = central ops hub (AGENTS.md, SOUL.md, etc.)</li>
+          <li>• Hermes/OWL AI agent: local macOS, automates coding + ops</li>
+          <li>• Obsidian vault (glober/): AI writes, Luiz browses</li>
+          <li>• ops/pipeline.md: lead + client tracker (updated Sundays)</li>
+          <li>• ops/metrics.md: weekly scorecards</li>
+          <li>• content/: LinkedIn, newsletter, YouTube production queue</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <p class="footer">
+      Absolutely Plausible — Full Architecture Overview · Generated 2026-05-23 · Internal Use Only
+    </p>
+  </div>
+</body>
+</html>
