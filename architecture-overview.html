@@ -251,29 +251,21 @@
         <rect x="510" y="430" width="60" height="155" rx="4" fill="rgba(30,41,59,0.5)" stroke="#475569" stroke-width="1"/>
         <text x="540" y="470" fill="#34d399" font-size="6" letter-spacing="0.05em" text-anchor="middle" transform="rotate(-90, 540, 530)">APPS / SUBDOMAINS</text>
 
-        <!-- ops.absolutelyplausible.com -->
+        <!-- crm.absolutelyplausible.com -->
         <rect x="590" y="440" width="170" height="100" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="675" y="470" fill="white" font-size="9" font-weight="600" text-anchor="middle">ops.absolutelyplausible.com</text>
-        <text x="675" y="484" fill="#34d399" font-size="6" text-anchor="middle">AP Ops Invoicing App</text>
-        <text x="675" y="497" fill="#94a3b8" font-size="6" text-anchor="middle">Cloudflare Pages (static, no build)</text>
-        <text x="675" y="510" fill="#94a3b8" font-size="6" text-anchor="middle">SPA: Client/Project/Invoice Mgmt</text>
+        <text x="675" y="470" fill="white" font-size="9" font-weight="600" text-anchor="middle">crm.absolutelyplausible.com</text>
+        <text x="675" y="484" fill="#34d399" font-size="6" text-anchor="middle">AP CRM (v1.0.0)</text>
+        <text x="675" y="497" fill="#94a3b8" font-size="6" text-anchor="middle">Cloudflare Pages deployed</text>
+        <text x="675" y="510" fill="#94a3b8" font-size="6" text-anchor="middle">CRM model + Ops UI (in transition)</text>
         <text x="675" y="526" fill="#fb7185" font-size="6" text-anchor="middle">Cloudflare Access (planned)</text>
 
-        <!-- crm.absolutelyplausible.com -->
-        <rect x="780" y="440" width="170" height="100" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="865" y="470" fill="white" font-size="9" font-weight="600" text-anchor="middle">crm.absolutelyplausible.com</text>
-        <text x="865" y="484" fill="#34d399" font-size="6" text-anchor="middle">AP CRM (v1.0.0)</text>
-        <text x="865" y="497" fill="#94a3b8" font-size="6" text-anchor="middle">Cloudflare Pages deployed</text>
-        <text x="865" y="510" fill="#94a3b8" font-size="6" text-anchor="middle">Opportunities + Client Relations</text>
-        <text x="865" y="526" fill="#fb7185" font-size="6" text-anchor="middle">Cloudflare Access (planned)</text>
-
         <!-- wgz-dashboard (planned) -->
-        <rect x="970" y="440" width="170" height="100" rx="6" fill="rgba(30,41,59,0.3)" stroke="#475569" stroke-width="1" stroke-dasharray="4,4"/>
-        <text x="1055" y="470" fill="#94a3b8" font-size="9" font-weight="600" text-anchor="middle">dashboard.* (planned)</text>
-        <text x="1055" y="484" fill="#94a3b8" font-size="6" text-anchor="middle">Personal Dashboard (wgz-dashboard)</text>
-        <text x="1055" y="497" fill="#94a3b8" font-size="6" text-anchor="middle">Local dev / planned</text>
-        <text x="1055" y="510" fill="#94a3b8" font-size="6" text-anchor="middle">Scorecards, Metrics, Pipeline</text>
-        <text x="1055" y="526" fill="#475569" font-size="6" text-anchor="middle">NOT YET DEPLOYED</text>
+        <rect x="780" y="440" width="170" height="100" rx="6" fill="rgba(30,41,59,0.3)" stroke="#475569" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="865" y="470" fill="#94a3b8" font-size="9" font-weight="600" text-anchor="middle">dashboard.* (planned)</text>
+        <text x="865" y="484" fill="#94a3b8" font-size="6" text-anchor="middle">Personal Dashboard (wgz-dashboard)</text>
+        <text x="865" y="497" fill="#94a3b8" font-size="6" text-anchor="middle">Local dev / planned</text>
+        <text x="865" y="510" fill="#94a3b8" font-size="6" text-anchor="middle">Scorecards, Metrics, Pipeline</text>
+        <text x="865" y="526" fill="#475569" font-size="6" text-anchor="middle">NOT YET DEPLOYED</text>
 
         <!-- ============================================================ -->
         <!-- DATA / BACKEND REGION                                        -->
@@ -384,9 +376,8 @@
         <text x="32" y="880" fill="#94a3b8" font-size="5.5">└── evolution-kart-workspace (client, separate)</text>
         <text x="340" y="840" fill="#22d3ee" font-size="6">absolutelyplausible.com</text>
         <text x="340" y="850" fill="#94a3b8" font-size="5.5">├── www (redirect)</text>
-        <text x="340" y="860" fill="#94a3b8" font-size="5.5">├── ops.absolutelyplausible.com (AP Ops v1.2.0)</text>
-        <text x="340" y="870" fill="#94a3b8" font-size="5.5">├── crm.absolutelyplausible.com (AP CRM v1.0.0)</text>
-        <text x="340" y="880" fill="#94a3b8" font-size="5.5">└── dashboard.* (planned)</text>
+        <text x="340" y="860" fill="#94a3b8" font-size="5.5">├── crm.absolutelyplausible.com (AP CRM v1.0.0)</text>
+        <text x="340" y="870" fill="#94a3b8" font-size="5.5">└── dashboard.* (planned)</text>
 
         <!-- ============================================================ -->
         <!-- TECH STACK SUMMARY                                           -->
@@ -540,7 +531,7 @@
         <ul>
           <li>• Cloudflare Access = zero-trust email-based auth</li>
           <li>• Public sites: open (robotfantome.com, absolutelyplausible.com)</li>
-          <li>• Internal sites: Access-gated (team, plan, mech, ops, crm)</li>
+          <li>• Internal sites: Access-gated (team, plan, mech, crm)</li>
           <li>• Team: Luiz + Bebeco + Samuel email allowlist</li>
           <li>• Each internal subdomain = separate Access application</li>
           <li>• Status: Access policies still being configured</li>
@@ -553,8 +544,8 @@
           <h3>Application Layer</h3>
         </div>
         <ul>
-          <li>• AP Ops (mech / ops subdomain): v1.2.0 beta — invoicing SPA</li>
-          <li>• AP CRM (crm subdomain): v1.0.0 — client relations</li>
+          <li>• AP Ops (mech.robotfantome.com): v1.2.0 beta — invoicing SPA</li>
+          <li>• AP CRM (crm.absolutelyplausible.com): v1.0.0 — CRM data model, UI in transition</li>
           <li>• Both: pure static HTML/CSS/JS, no build step</li>
           <li>• Data: localStorage (offline-first) → Google Sheets sync</li>
           <li>• Invoice format: AP-YYYY-MMDD-001</li>
