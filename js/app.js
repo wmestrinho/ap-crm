@@ -1,13 +1,14 @@
 /**
- * AP Ops | Absolutely Plausible — App Logic
- * Navigation, form submissions, clients, projects, dashboard.
+ * AP CRM | Absolutely Plausible — App Logic
+ * Navigation, form submissions, accounts, contacts, opportunities, leads, activities, dashboard.
  */
 
 // ── Navigation ────────────────────────────────────────────────
 function go(viewId) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(viewId)?.classList.add('active');
-  updateClientBadges();
+  updateAccountBadges();
+  updateContactBadges();
 
   if (viewId === 'clientDashboard') refreshDashboard();
   if (viewId === 'invoiceBuilder') {
@@ -27,9 +28,9 @@ document.addEventListener('keydown', (e) => {
   // Mod key (Cmd/Ctrl) combinations
   if (e.metaKey || e.ctrlKey) {
     switch (e.key.toLowerCase()) {
-      case '1': // Log Work
+      case '1': // Log Activity
         e.preventDefault();
-        go('logWork');
+        go('logActivity');
         break;
       case '2': // Log Expense
         e.preventDefault();
@@ -873,7 +874,8 @@ function updateMenuStatus() {
   // Restore clients + projects + selectors
   renderClientSelect();
   renderProjectSelect();
-  updateClientBadges();
+  updateAccountBadges();
+  updateContactBadges();
   updateMenuStatus();
 
   // Tick clock on menu
