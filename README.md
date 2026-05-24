@@ -77,3 +77,31 @@ Absolutely Plausible cool watercolour palette — defined in `css/style.css` `:r
 ---
 
 *Internal tool — Absolutely Plausible.*
+
+---
+
+## AI Agent Handoff
+
+Canonical local path:
+- `/Users/wmestrinho/Workspace/Projects/ap-crm`
+
+Legacy local path:
+- `/Users/wmestrinho/.openclaw/workspace/projects/ap-crm`
+
+Before editing:
+- Read `AGENTS.md`.
+- Check `git status --short --branch`.
+- Preserve any project-specific instructions in `CLAUDE.md`.
+
+Deployment notes:
+- Deployment not fully identified yet. Add exact deploy command/target when this repo is next touched.
+
+Version rule:
+- Current baseline version: `v1.2.0`
+- Keep version source documented.
+- Web UIs must visibly display the version.
+
+Validation:
+- Run `python3 scripts/validate_agent_baseline.py`.
+- Also run project-specific tests/builds when present.
+
