@@ -93,7 +93,10 @@
         <button type="submit" class="btn-submit">⚡ SAVE LEAD</button>
       </form>
       <div class="form-card" style="margin-top:14px">
-        <h3 style="margin-bottom:12px">Lead List</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <h3 style="margin:0">Lead List</h3>
+          <button class="btn-secondary" type="button" onclick="exportEntityCSV('leads')">EXPORT FILTERED CSV</button>
+        </div>
         <div class="form-row" style="margin-bottom:10px">
           <div class="form-group" style="margin-bottom:0"><label>Search</label><input id="leadsSearch" oninput="renderLeads()" placeholder="name, company, email..." /></div>
           <div class="form-group" style="margin-bottom:0"><label>Status Filter</label><select id="leadsFilter" onchange="renderLeads()"></select></div>
@@ -116,7 +119,7 @@
         <div class="form-group"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
         <button type="submit" class="btn-submit">⚡ SAVE ACCOUNT</button>
       </form>
-      <div class="form-card" style="margin-top:14px"><h3 style="margin-bottom:12px">Account List</h3><div class="form-group" style="margin-bottom:10px"><label>Search</label><input id="accountsSearch" oninput="renderAccounts()" placeholder="account, industry, website..." /></div><div id="accountsList"></div></div>
+      <div class="form-card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap"><h3 style="margin:0">Account List</h3><button class="btn-secondary" type="button" onclick="exportEntityCSV('accounts')">EXPORT FILTERED CSV</button></div><div class="form-group" style="margin-bottom:10px"><label>Search</label><input id="accountsSearch" oninput="renderAccounts()" placeholder="account, industry, website..." /></div><div id="accountsList"></div></div>
     </div>
 
     <div id="contactsView" class="view">
@@ -136,7 +139,7 @@
         </div>
         <button type="submit" class="btn-submit">⚡ SAVE CONTACT</button>
       </form>
-      <div class="form-card" style="margin-top:14px"><h3 style="margin-bottom:12px">Contact List</h3><div class="form-row" style="margin-bottom:10px"><div class="form-group" style="margin-bottom:0"><label>Search</label><input id="contactsSearch" oninput="renderContacts()" placeholder="contact, role, email..." /></div><div class="form-group" style="margin-bottom:0"><label>Account Filter</label><select id="contactsFilter" onchange="renderContacts()"><option value="all">ALL_ACCOUNTS</option></select></div></div><div id="contactsList"></div></div>
+      <div class="form-card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap"><h3 style="margin:0">Contact List</h3><button class="btn-secondary" type="button" onclick="exportEntityCSV('contacts')">EXPORT FILTERED CSV</button></div><div class="form-row" style="margin-bottom:10px"><div class="form-group" style="margin-bottom:0"><label>Search</label><input id="contactsSearch" oninput="renderContacts()" placeholder="contact, role, email..." /></div><div class="form-group" style="margin-bottom:0"><label>Account Filter</label><select id="contactsFilter" onchange="renderContacts()"><option value="all">ALL_ACCOUNTS</option></select></div></div><div id="contactsList"></div></div>
     </div>
 
     <div id="opportunitiesView" class="view">
@@ -157,7 +160,7 @@
         <div class="form-group"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
         <button type="submit" class="btn-submit">⚡ SAVE OPPORTUNITY</button>
       </form>
-      <div class="form-card" style="margin-top:14px"><h3 style="margin-bottom:12px">Pipeline</h3><div class="form-row" style="margin-bottom:10px"><div class="form-group" style="margin-bottom:0"><label>Search</label><input id="opportunitiesSearch" oninput="renderOpportunities()" placeholder="opportunity, account..." /></div><div class="form-group" style="margin-bottom:0"><label>Stage Filter</label><select id="opportunitiesFilter" onchange="renderOpportunities()"></select></div></div><div id="opportunitiesList"></div></div>
+      <div class="form-card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap"><h3 style="margin:0">Pipeline</h3><button class="btn-secondary" type="button" onclick="exportEntityCSV('opportunities')">EXPORT FILTERED CSV</button></div><div class="form-row" style="margin-bottom:10px"><div class="form-group" style="margin-bottom:0"><label>Search</label><input id="opportunitiesSearch" oninput="renderOpportunities()" placeholder="opportunity, account..." /></div><div class="form-group" style="margin-bottom:0"><label>Stage Filter</label><select id="opportunitiesFilter" onchange="renderOpportunities()"></select></div></div><div id="opportunitiesList"></div></div>
     </div>
 
     <div id="activitiesView" class="view">
@@ -183,10 +186,13 @@
           <div class="form-group"><label>Due Date</label><input name="dueDate" type="date" /></div>
           <div class="form-group"><label>Owner</label><input id="activityOwner" name="owner" readonly /></div>
         </div>
-        <div class="form-group"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label>Status</label><select name="status"><option value="Open">Open</option><option value="Done">Done</option></select></div>
+          <div class="form-group"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
+        </div>
         <button type="submit" class="btn-submit">⚡ SAVE ACTIVITY</button>
       </form>
-      <div class="form-card" style="margin-top:14px"><h3 style="margin-bottom:12px">Activity Log</h3><div class="form-row" style="margin-bottom:10px"><div class="form-group" style="margin-bottom:0"><label>Search</label><input id="activitiesSearch" oninput="renderActivities()" placeholder="subject, related, notes..." /></div><div class="form-group" style="margin-bottom:0"><label>Type Filter</label><select id="activitiesFilter" onchange="renderActivities()"><option value="all">ALL_TYPES</option></select></div></div><div id="activitiesList"></div></div>
+      <div class="form-card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap"><h3 style="margin:0">Activity Log</h3><button class="btn-secondary" type="button" onclick="exportEntityCSV('activities')">EXPORT FILTERED CSV</button></div><div class="form-row" style="margin-bottom:10px"><div class="form-group" style="margin-bottom:0"><label>Search</label><input id="activitiesSearch" oninput="renderActivities()" placeholder="subject, related, notes..." /></div><div class="form-group" style="margin-bottom:0"><label>Type Filter</label><select id="activitiesFilter" onchange="renderActivities()"><option value="all">ALL_TYPES</option></select></div></div><div id="activitiesList"></div></div>
     </div>
 
     <div id="dashboardView" class="view">
@@ -207,6 +213,7 @@
         <div class="btn-group">
           <button class="btn-secondary" type="button" onclick="exportBackup()">EXPORT JSON BACKUP</button>
           <button class="btn-secondary" type="button" onclick="triggerRestoreFile()">RESTORE JSON BACKUP</button>
+          <button class="btn-secondary" type="button" onclick="pullFromSheets()">PULL FROM SHEETS</button>
         </div>
         <input id="restoreFileInput" type="file" accept="application/json" style="display:none" onchange="importBackup(event)" />
       </div>

@@ -1,8 +1,9 @@
 /**
  * AP CRM app logic
- * Scope: Leads, Accounts, Contacts, Opportunities, Activities + Dashboard
- * v1.5.0: CRUD actions, backup/restore, search/filters
+ * v1.6.0: guardrails, stage quick actions, activity status/overdue, CSV exports, Sheets pull
  */
+
+const EDIT_STATE = { entity: '', id: '' };
 
 function toast(msg, isError = false) {
   const el = document.getElementById('toast');
@@ -11,7 +12,7 @@ function toast(msg, isError = false) {
   el.className = `toast${isError ? ' error' : ''}`;
   el.classList.remove('hidden');
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.add('hidden'), 2500);
+  el._t = setTimeout(() => el.classList.add('hidden'), 2600);
 }
 
 function go(viewId) {
@@ -20,34 +21,33 @@ function go(viewId) {
   if (viewId === 'dashboardView') refreshDashboard();
 }
 
-function normalize(value) { return (value || '').trim(); }
-function key(value) { return normalize(value).toLowerCase(); }
+const normalize = (v) => (v || '').trim();
+const key = (v) => normalize(v).toLowerCase();
 
 function setOperatorFilter(val) {
   localStorage.setItem('ap_operator_filter', val || 'all');
   renderAll();
 }
-function getOperatorFilter() { return localStorage.getItem('ap_operator_filter') || 'all'; }
+const getOperatorFilter = () => localStorage.getItem('ap_operator_filter') || 'all';
+const byOwnerFilter = (row) => getOperatorFilter() !== 'mine' || row.owner === STATE.currentUser;
 
-function byOwnerFilter(row) {
-  const mode = getOperatorFilter();
-  if (mode !== 'mine') return true;
-  return row.owner === STATE.currentUser;
-}
-
-function getSearch(viewKey) {
-  const el = document.getElementById(`${viewKey}Search`);
-  return key(el?.value || '');
-}
-
-function getExtraFilter(viewKey) {
-  const el = document.getElementById(`${viewKey}Filter`);
-  return normalize(el?.value || 'all');
-}
+const getSearch = (viewKey) => key(document.getElementById(`${viewKey}Search`)?.value || '');
+const getExtraFilter = (viewKey) => normalize(document.getElementById(`${viewKey}Filter`)?.value || 'all');
 
 function byText(row, fields, q) {
   if (!q) return true;
   return fields.some(f => key(row[f]).includes(q));
+}
+
+function line(text, extraStyle = '') {
+  return `<div style="padding:8px 0;border-bottom:1px solid var(--border);${extraStyle}">${text}</div>`;
+}
+
+function actions(entity, id) {
+  const btn = (label, fn) => `<button class="btn-secondary" type="button" style="padding:2px 8px" onclick="${fn}">${label}</button>`;
+  const quick = entity === 'opportunities' ? ` ${btn('NEXT STAGE', `moveOpportunityToNextStage('${id}')`)}` : '';
+  const activity = entity === 'activities' ? ` ${btn('TOGGLE DONE', `toggleActivityStatus('${id}')`)}` : '';
+  return `<span class="card-sub"> ${btn('EDIT', `editEntity('${entity}','${id}')`)} ${btn('DELETE', `deleteEntity('${entity}','${id}')`)}${quick}${activity}</span>`;
 }
 
 function setUser(val) {
@@ -79,12 +79,9 @@ function updateOwnerInputs() {
 }
 
 function updateMenuStatus() {
-  const status = document.getElementById('menuStatusLine');
-  if (!status) return;
-  const u = STATE.currentUser || 'NO_USER';
-  const a = STATE.currentAccount || 'NO_ACCOUNT';
-  const c = STATE.currentContact || 'NO_CONTACT';
-  status.textContent = `[ USER: ${u} | ACCOUNT: ${a} | CONTACT: ${c} ]`;
+  const el = document.getElementById('menuStatusLine');
+  if (!el) return;
+  el.textContent = `[ USER: ${STATE.currentUser || 'NO_USER'} | ACCOUNT: ${STATE.currentAccount || 'NO_ACCOUNT'} | CONTACT: ${STATE.currentContact || 'NO_CONTACT'} ]`;
 }
 
 function renderUserSelect() {
@@ -101,12 +98,11 @@ function renderUserSelect() {
 }
 
 function renderAccountSelect() {
-  const accountNames = [...new Set(STATE.accounts.map(a => a.name).filter(Boolean))].sort();
-
+  const names = [...new Set(STATE.accounts.map(a => a.name).filter(Boolean))].sort();
   const current = document.getElementById('currentAccount');
   if (current) {
     current.innerHTML = '<option value="">NO_ACCOUNT</option>';
-    accountNames.forEach(name => {
+    names.forEach(name => {
       const opt = document.createElement('option');
       opt.value = name;
       opt.textContent = name;
@@ -119,13 +115,13 @@ function renderAccountSelect() {
     if (!sel) return;
     const selected = sel.value;
     sel.innerHTML = '<option value="">SELECT_ACCOUNT</option>';
-    accountNames.forEach(name => {
+    names.forEach(name => {
       const opt = document.createElement('option');
       opt.value = name;
       opt.textContent = name;
       sel.appendChild(opt);
     });
-    if (selected && accountNames.includes(selected)) sel.value = selected;
+    if (selected && names.includes(selected)) sel.value = selected;
     if (!sel.value && STATE.currentAccount) sel.value = STATE.currentAccount;
   });
 }
@@ -133,12 +129,13 @@ function renderAccountSelect() {
 function renderContactSelect() {
   const sel = document.getElementById('currentContact');
   if (!sel) return;
-  const contacts = STATE.contacts
+  const names = STATE.contacts
     .filter(c => !STATE.currentAccount || c.account === STATE.currentAccount)
-    .map(c => c.name).filter(Boolean).sort();
-
+    .map(c => c.name)
+    .filter(Boolean)
+    .sort();
   sel.innerHTML = '<option value="">NO_CONTACT</option>';
-  contacts.forEach(name => {
+  names.forEach(name => {
     const opt = document.createElement('option');
     opt.value = name;
     opt.textContent = name;
@@ -162,6 +159,9 @@ function initPickers() {
 
   const oppFilter = document.getElementById('opportunitiesFilter');
   if (oppFilter) oppFilter.innerHTML = '<option value="all">ALL_STAGES</option>' + AP.opportunityStages.map(s => `<option value="${s}">${s}</option>`).join('');
+
+  const activitiesFilter = document.getElementById('activitiesFilter');
+  if (activitiesFilter) activitiesFilter.innerHTML = '<option value="all">ALL_TYPES</option>' + AP.activityTypes.map(t => `<option value="${t}">${t}</option>`).join('');
 }
 
 function saveAll() {
@@ -172,70 +172,98 @@ function saveAll() {
   localStorage.setItem('ap_activities', JSON.stringify(STATE.activities));
 }
 
-function line(text) { return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">${text}</div>`; }
-function actions(entity, id) { return `<span class="card-sub"> <button class="btn-secondary" style="padding:2px 8px" onclick="editEntity('${entity}','${id}')">EDIT</button> <button class="btn-secondary" style="padding:2px 8px" onclick="deleteEntity('${entity}','${id}')">DELETE</button></span>`; }
+function getFilteredRows(entity) {
+  if (entity === 'leads') {
+    const q = getSearch('leads');
+    const statusFilter = getExtraFilter('leads');
+    return STATE.leads.filter(byOwnerFilter)
+      .filter(r => statusFilter === 'all' || r.status === statusFilter)
+      .filter(r => byText(r, ['name', 'company', 'email', 'phone', 'notes', 'owner', 'status'], q));
+  }
+  if (entity === 'accounts') {
+    const q = getSearch('accounts');
+    return STATE.accounts.filter(byOwnerFilter)
+      .filter(r => byText(r, ['name', 'industry', 'website', 'notes', 'owner'], q));
+  }
+  if (entity === 'contacts') {
+    const q = getSearch('contacts');
+    const accountFilter = getExtraFilter('contacts');
+    return STATE.contacts.filter(byOwnerFilter)
+      .filter(r => accountFilter === 'all' || r.account === accountFilter)
+      .filter(r => byText(r, ['name', 'account', 'role', 'email', 'phone', 'owner'], q));
+  }
+  if (entity === 'opportunities') {
+    const q = getSearch('opportunities');
+    const stageFilter = getExtraFilter('opportunities');
+    return STATE.opportunities.filter(byOwnerFilter)
+      .filter(r => stageFilter === 'all' || r.stage === stageFilter)
+      .filter(r => byText(r, ['name', 'account', 'stage', 'notes', 'owner'], q));
+  }
+  if (entity === 'activities') {
+    const q = getSearch('activities');
+    const typeFilter = getExtraFilter('activities');
+    return STATE.activities.filter(byOwnerFilter)
+      .filter(r => typeFilter === 'all' || r.type === typeFilter)
+      .filter(r => byText(r, ['type', 'subject', 'relatedType', 'relatedName', 'notes', 'owner', 'status'], q));
+  }
+  return [];
+}
 
 function renderLeads() {
-  const q = getSearch('leads');
-  const statusFilter = getExtraFilter('leads');
-  const rows = STATE.leads
-    .filter(byOwnerFilter)
-    .filter(r => statusFilter === 'all' ? true : r.status === statusFilter)
-    .filter(r => byText(r, ['name', 'company', 'email', 'phone', 'notes', 'owner', 'status'], q));
+  const rows = getFilteredRows('leads');
   const box = document.getElementById('leadsList');
   if (!box) return;
-  if (!rows.length) return box.innerHTML = '<div class="card-sub">No leads found.</div>';
-  box.innerHTML = rows.slice().reverse().map(l => line(`<strong>${l.name}</strong> — ${l.status}${l.company ? ` · ${l.company}` : ''}<br><span class="card-sub">owner: ${l.owner || '-'}${l.email ? ` · ${l.email}` : ''}</span>${actions('leads', l.id)}`)).join('');
+  box.innerHTML = rows.length
+    ? rows.slice().reverse().map(l => line(`<strong>${l.name}</strong> — ${l.status}${l.company ? ` · ${l.company}` : ''}<br><span class="card-sub">owner: ${l.owner || '-'}${l.email ? ` · ${l.email}` : ''}</span>${actions('leads', l.id)}`)).join('')
+    : '<div class="card-sub">No leads found.</div>';
 }
 
 function renderAccounts() {
-  const q = getSearch('accounts');
-  const rows = STATE.accounts
-    .filter(byOwnerFilter)
-    .filter(r => byText(r, ['name', 'industry', 'website', 'notes', 'owner'], q));
+  const rows = getFilteredRows('accounts');
   const box = document.getElementById('accountsList');
   if (!box) return;
-  if (!rows.length) return box.innerHTML = '<div class="card-sub">No accounts found.</div>';
-  box.innerHTML = rows.slice().reverse().map(a => line(`<strong>${a.name}</strong>${a.industry ? ` — ${a.industry}` : ''}<br><span class="card-sub">owner: ${a.owner || '-'}${a.website ? ` · ${a.website}` : ''}</span>${actions('accounts', a.id)}`)).join('');
+  box.innerHTML = rows.length
+    ? rows.slice().reverse().map(a => line(`<strong>${a.name}</strong>${a.industry ? ` — ${a.industry}` : ''}<br><span class="card-sub">owner: ${a.owner || '-'}${a.website ? ` · ${a.website}` : ''}</span>${actions('accounts', a.id)}`)).join('')
+    : '<div class="card-sub">No accounts found.</div>';
 }
 
 function renderContacts() {
-  const q = getSearch('contacts');
-  const accountFilter = getExtraFilter('contacts');
-  const rows = STATE.contacts
-    .filter(byOwnerFilter)
-    .filter(r => accountFilter === 'all' ? true : r.account === accountFilter)
-    .filter(r => byText(r, ['name', 'account', 'role', 'email', 'phone', 'owner'], q));
+  const rows = getFilteredRows('contacts');
   const box = document.getElementById('contactsList');
   if (!box) return;
-  if (!rows.length) return box.innerHTML = '<div class="card-sub">No contacts found.</div>';
-  box.innerHTML = rows.slice().reverse().map(c => line(`<strong>${c.name}</strong>${c.role ? ` — ${c.role}` : ''}<br><span class="card-sub">${c.account || '-'} · owner: ${c.owner || '-'}${c.email ? ` · ${c.email}` : ''}</span>${actions('contacts', c.id)}`)).join('');
+  box.innerHTML = rows.length
+    ? rows.slice().reverse().map(c => line(`<strong>${c.name}</strong>${c.role ? ` — ${c.role}` : ''}<br><span class="card-sub">${c.account || '-'} · owner: ${c.owner || '-'}${c.email ? ` · ${c.email}` : ''}</span>${actions('contacts', c.id)}`)).join('')
+    : '<div class="card-sub">No contacts found.</div>';
 }
 
 function renderOpportunities() {
-  const q = getSearch('opportunities');
-  const stageFilter = getExtraFilter('opportunities');
-  const rows = STATE.opportunities
-    .filter(byOwnerFilter)
-    .filter(r => stageFilter === 'all' ? true : r.stage === stageFilter)
-    .filter(r => byText(r, ['name', 'account', 'stage', 'notes', 'owner'], q));
+  const rows = getFilteredRows('opportunities');
   const box = document.getElementById('opportunitiesList');
   if (!box) return;
-  if (!rows.length) return box.innerHTML = '<div class="card-sub">No opportunities found.</div>';
-  box.innerHTML = rows.slice().reverse().map(o => line(`<strong>${o.name}</strong> — ${o.stage}<br><span class="card-sub">${o.account || '-'} · $${(o.value || 0).toFixed(2)} · owner: ${o.owner || '-'}</span>${actions('opportunities', o.id)}`)).join('');
+  box.innerHTML = rows.length
+    ? rows.slice().reverse().map(o => line(`<strong>${o.name}</strong> — ${o.stage}<br><span class="card-sub">${o.account || '-'} · $${(o.value || 0).toFixed(2)} · owner: ${o.owner || '-'}</span>${actions('opportunities', o.id)}`)).join('')
+    : '<div class="card-sub">No opportunities found.</div>';
+}
+
+function isOverdue(activity) {
+  if (!activity.dueDate || activity.status === 'Done') return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(activity.dueDate) < today;
 }
 
 function renderActivities() {
-  const q = getSearch('activities');
-  const typeFilter = getExtraFilter('activities');
-  const rows = STATE.activities
-    .filter(byOwnerFilter)
-    .filter(r => typeFilter === 'all' ? true : r.type === typeFilter)
-    .filter(r => byText(r, ['type', 'subject', 'relatedType', 'relatedName', 'notes', 'owner'], q));
+  const rows = getFilteredRows('activities');
   const box = document.getElementById('activitiesList');
   if (!box) return;
-  if (!rows.length) return box.innerHTML = '<div class="card-sub">No activities found.</div>';
-  box.innerHTML = rows.slice().reverse().map(a => line(`<strong>${a.type}</strong> — ${a.subject}<br><span class="card-sub">${a.relatedType}: ${a.relatedName} · owner: ${a.owner || '-'}${a.dueDate ? ` · due: ${a.dueDate}` : ''}</span>${actions('activities', a.id)}`)).join('');
+  box.innerHTML = rows.length
+    ? rows.slice().reverse().map(a => {
+      const overdue = isOverdue(a);
+      const statusMark = a.status === 'Done' ? '✅ DONE' : overdue ? '⚠ OVERDUE' : 'OPEN';
+      const style = overdue ? 'background:rgba(192,71,58,0.10);' : '';
+      return line(`<strong>${a.type}</strong> — ${a.subject}<br><span class="card-sub">${a.relatedType}: ${a.relatedName} · ${statusMark} · owner: ${a.owner || '-'}${a.dueDate ? ` · due: ${a.dueDate}` : ''}</span>${actions('activities', a.id)}`, style);
+    }).join('')
+    : '<div class="card-sub">No activities found.</div>';
 }
 
 function refreshDashboard() {
@@ -243,7 +271,6 @@ function refreshDashboard() {
   const accounts = STATE.accounts.filter(byOwnerFilter);
   const contacts = STATE.contacts.filter(byOwnerFilter);
   const opps = STATE.opportunities.filter(byOwnerFilter);
-
   const openOpps = opps.filter(o => !['Closed Won', 'Closed Lost'].includes(o.stage));
   const openValue = openOpps.reduce((s, o) => s + (o.value || 0), 0);
 
@@ -253,27 +280,22 @@ function refreshDashboard() {
   document.getElementById('dashOpenOpps').textContent = String(openOpps.length);
   document.getElementById('dashOpenValue').textContent = `$${openValue.toFixed(2)}`;
 
-  const stageTotals = {};
-  AP.opportunityStages.forEach(s => { stageTotals[s] = { count: 0, value: 0 }; });
+  const totals = {};
+  AP.opportunityStages.forEach(s => { totals[s] = { count: 0, value: 0 }; });
   opps.forEach(o => {
-    if (!stageTotals[o.stage]) stageTotals[o.stage] = { count: 0, value: 0 };
-    stageTotals[o.stage].count += 1;
-    stageTotals[o.stage].value += (o.value || 0);
+    if (!totals[o.stage]) totals[o.stage] = { count: 0, value: 0 };
+    totals[o.stage].count += 1;
+    totals[o.stage].value += (o.value || 0);
   });
-
   const box = document.getElementById('stageTotals');
-  box.innerHTML = Object.entries(stageTotals)
+  box.innerHTML = Object.entries(totals)
     .filter(([, v]) => v.count > 0)
     .map(([stage, v]) => line(`<strong>${stage}</strong> · ${v.count} · $${v.value.toFixed(2)}`))
     .join('') || '<div class="card-sub">No opportunities yet.</div>';
 }
 
-const EDIT_STATE = { entity: '', id: '' };
-
 function labelForField(field) {
-  return field
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, s => s.toUpperCase());
+  return field.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
 }
 
 function closeEditModal() {
@@ -281,24 +303,18 @@ function closeEditModal() {
 }
 
 function editEntity(entity, id) {
-  const arr = STATE[entity];
-  const row = arr.find(r => r.id === id);
+  const row = (STATE[entity] || []).find(r => r.id === id);
   if (!row) return;
-
   EDIT_STATE.entity = entity;
   EDIT_STATE.id = id;
 
   const title = document.getElementById('editModalTitle');
   const fields = document.getElementById('editModalFields');
   if (!title || !fields) return;
-
   title.textContent = `// Edit ${entity.slice(0, -1).toUpperCase()}`;
 
-  const selectMap = {
-    status: AP.leadStatus,
-    stage: AP.opportunityStages,
-    type: AP.activityTypes
-  };
+  const selectMap = { status: AP.leadStatus, stage: AP.opportunityStages, type: AP.activityTypes };
+  if (entity === 'activities') selectMap.status = ['Open', 'Done'];
 
   fields.innerHTML = Object.keys(row)
     .filter(k => !['id', 'createdAt'].includes(k))
@@ -311,23 +327,19 @@ function editEntity(entity, id) {
       const inputType = k === 'value' ? 'number' : (k === 'email' ? 'email' : (k === 'closeDate' || k === 'dueDate' ? 'date' : 'text'));
       const step = k === 'value' ? ' step="0.01" min="0"' : '';
       return `<div class="form-group"><label>${labelForField(k)}</label><input name="${k}" type="${inputType}" value="${String(val).replace(/"/g, '&quot;')}"${step} /></div>`;
-    })
-    .join('');
+    }).join('');
 
   document.getElementById('editModal')?.classList.add('open');
 }
 
 function saveEditModal(e) {
   e.preventDefault();
-  const arr = STATE[EDIT_STATE.entity] || [];
-  const row = arr.find(r => r.id === EDIT_STATE.id);
+  const row = (STATE[EDIT_STATE.entity] || []).find(r => r.id === EDIT_STATE.id);
   if (!row) return closeEditModal();
-
   const data = Object.fromEntries(new FormData(e.target).entries());
   Object.keys(data).forEach(k => {
     row[k] = k === 'value' ? Number(data[k] || 0) : normalize(data[k]);
   });
-
   if ('name' in row && !row.name) return toast('Name is required', true);
   if ('account' in row && !row.account) return toast('Account is required', true);
 
@@ -337,12 +349,69 @@ function saveEditModal(e) {
   toast('Updated ✓');
 }
 
+function dependencySummary(entity, id) {
+  if (entity === 'accounts') {
+    const row = STATE.accounts.find(r => r.id === id);
+    if (!row) return '';
+    const contacts = STATE.contacts.filter(c => c.account === row.name).length;
+    const opps = STATE.opportunities.filter(o => o.account === row.name).length;
+    const acts = STATE.activities.filter(a => a.relatedType === 'account' && a.relatedName === row.name).length;
+    return `Deleting account '${row.name}' impacts: ${contacts} contact(s), ${opps} opportunity(s), ${acts} activity(s).`;
+  }
+  if (entity === 'contacts') {
+    const row = STATE.contacts.find(r => r.id === id);
+    if (!row) return '';
+    const acts = STATE.activities.filter(a => a.relatedType === 'contact' && a.relatedName === row.name).length;
+    return `Deleting contact '${row.name}' impacts: ${acts} related activity(s).`;
+  }
+  return 'Delete this record?';
+}
+
 function deleteEntity(entity, id) {
-  if (!confirm('Delete this record?')) return;
-  STATE[entity] = STATE[entity].filter(r => r.id !== id);
+  const msg = dependencySummary(entity, id);
+  if (!confirm(msg + '\n\nContinue?')) return;
+
+  if (entity === 'accounts') {
+    const account = STATE.accounts.find(r => r.id === id);
+    if (account) {
+      STATE.contacts = STATE.contacts.filter(c => c.account !== account.name);
+      STATE.opportunities = STATE.opportunities.filter(o => o.account !== account.name);
+      STATE.activities = STATE.activities.filter(a => !(a.relatedType === 'account' && a.relatedName === account.name));
+      if (STATE.currentAccount === account.name) setAccount('');
+    }
+  }
+  if (entity === 'contacts') {
+    const contact = STATE.contacts.find(r => r.id === id);
+    if (contact) {
+      STATE.activities = STATE.activities.filter(a => !(a.relatedType === 'contact' && a.relatedName === contact.name));
+      if (STATE.currentContact === contact.name) setContact('');
+    }
+  }
+
+  STATE[entity] = (STATE[entity] || []).filter(r => r.id !== id);
   saveAll();
   renderAll();
   toast('Deleted ✓');
+}
+
+function moveOpportunityToNextStage(id) {
+  const row = STATE.opportunities.find(o => o.id === id);
+  if (!row) return;
+  const idx = AP.opportunityStages.indexOf(row.stage);
+  if (idx < 0 || idx >= AP.opportunityStages.length - 1) return toast('Already at final stage');
+  row.stage = AP.opportunityStages[idx + 1];
+  saveAll();
+  renderAll();
+  toast(`Moved to ${row.stage} ✓`);
+}
+
+function toggleActivityStatus(id) {
+  const row = STATE.activities.find(a => a.id === id);
+  if (!row) return;
+  row.status = row.status === 'Done' ? 'Open' : 'Done';
+  saveAll();
+  renderActivities();
+  toast(`Activity ${row.status}`);
 }
 
 async function submitLead(e) {
@@ -363,7 +432,7 @@ async function submitAccount(e) {
   if (!row.name) return toast('Account name is required', true);
   if (STATE.accounts.some(a => key(a.name) === key(row.name))) return toast('Account already exists', true);
   STATE.accounts.push(row); if (!STATE.currentAccount) setAccount(row.name); saveAll(); try { await syncAccount(row); } catch (_) {}
-  e.target.reset(); updateOwnerInputs(); renderAccountSelect(); renderAccounts(); refreshDashboard(); renderContacts(); toast('Account saved ✓');
+  e.target.reset(); updateOwnerInputs(); renderAll(); toast('Account saved ✓');
 }
 
 async function submitContact(e) {
@@ -374,7 +443,7 @@ async function submitContact(e) {
   if (!row.account || !row.name) return toast('Account and contact name are required', true);
   if (STATE.contacts.some(c => key(c.account) === key(row.account) && key(c.name) === key(row.name))) return toast('Contact already exists for this account', true);
   STATE.contacts.push(row); if (!STATE.currentContact) setContact(row.name); saveAll(); try { await syncContact(row); } catch (_) {}
-  e.target.reset(); updateOwnerInputs(); renderContactSelect(); renderContacts(); refreshDashboard(); toast('Contact saved ✓');
+  e.target.reset(); updateOwnerInputs(); renderAll(); toast('Contact saved ✓');
 }
 
 async function submitOpportunity(e) {
@@ -384,14 +453,14 @@ async function submitOpportunity(e) {
   const row = { id: crypto.randomUUID(), account: normalize(fd.account), name: normalize(fd.name), stage: normalize(fd.stage) || 'Prospecting', value: Number(fd.value || 0), closeDate: normalize(fd.closeDate), notes: normalize(fd.notes), owner: STATE.currentUser, createdAt: new Date().toISOString() };
   if (!row.account || !row.name) return toast('Account and opportunity are required', true);
   STATE.opportunities.push(row); saveAll(); try { await syncOpportunity(row); } catch (_) {}
-  e.target.reset(); initPickers(); updateOwnerInputs(); renderOpportunities(); refreshDashboard(); toast('Opportunity saved ✓');
+  e.target.reset(); initPickers(); updateOwnerInputs(); renderAll(); toast('Opportunity saved ✓');
 }
 
 async function submitActivity(e) {
   e.preventDefault();
   if (!STATE.currentUser) return toast('Select operator first', true);
   const fd = Object.fromEntries(new FormData(e.target).entries());
-  const row = { id: crypto.randomUUID(), type: normalize(fd.type), subject: normalize(fd.subject), relatedType: normalize(fd.relatedType), relatedName: normalize(fd.relatedName), dueDate: normalize(fd.dueDate), notes: normalize(fd.notes), owner: STATE.currentUser, createdAt: new Date().toISOString() };
+  const row = { id: crypto.randomUUID(), type: normalize(fd.type), subject: normalize(fd.subject), relatedType: normalize(fd.relatedType), relatedName: normalize(fd.relatedName), dueDate: normalize(fd.dueDate), status: normalize(fd.status) || 'Open', notes: normalize(fd.notes), owner: STATE.currentUser, createdAt: new Date().toISOString() };
   if (!row.type || !row.subject || !row.relatedName) return toast('Type, subject and related name are required', true);
   STATE.activities.push(row); saveAll(); try { await syncActivity(row); } catch (_) {}
   e.target.reset(); initPickers(); updateOwnerInputs(); renderActivities(); toast('Activity saved ✓');
@@ -409,13 +478,7 @@ function exportBackup() {
       activities: STATE.activities
     }
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `ap-crm-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadJSON(payload, `ap-crm-backup-${new Date().toISOString().slice(0, 10)}.json`);
   toast('Backup exported ✓');
 }
 
@@ -446,6 +509,66 @@ function importBackup(event) {
   event.target.value = '';
 }
 
+function toCSV(rows) {
+  if (!rows.length) return '';
+  const headers = [...new Set(rows.flatMap(r => Object.keys(r)))];
+  const esc = (v) => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [headers.join(','), ...rows.map(r => headers.map(h => esc(r[h])).join(','))].join('\n');
+}
+
+function downloadText(text, filename, type = 'text/plain') {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadJSON(obj, filename) {
+  downloadText(JSON.stringify(obj, null, 2), filename, 'application/json');
+}
+
+function exportEntityCSV(entity) {
+  const rows = getFilteredRows(entity);
+  if (!rows.length) return toast('No rows to export', true);
+  downloadText(toCSV(rows), `ap-crm-${entity}-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
+  toast(`Exported ${rows.length} ${entity} row(s) ✓`);
+}
+
+async function pullFromSheets() {
+  try {
+    const res = await fetchCRMAll();
+    if (!res?.ok) return toast('Sheets pull failed', true);
+
+    const mergeByIdOrKey = (localRows, remoteRows, keys) => {
+      const map = new Map();
+      localRows.forEach(r => map.set(r.id || keys.map(k => key(r[k])).join('|'), r));
+      remoteRows.forEach(r => {
+        const rid = r.id || keys.map(k => key(r[k])).join('|');
+        if (!map.has(rid)) map.set(rid, { ...r, id: r.id || crypto.randomUUID() });
+      });
+      return [...map.values()];
+    };
+
+    STATE.accounts = mergeByIdOrKey(STATE.accounts, res.accounts || [], ['name']);
+    STATE.contacts = mergeByIdOrKey(STATE.contacts, res.contacts || [], ['account', 'name']);
+    STATE.leads = mergeByIdOrKey(STATE.leads, res.leads || [], ['name', 'email']);
+    STATE.opportunities = mergeByIdOrKey(STATE.opportunities, res.opportunities || [], ['account', 'name']);
+    STATE.activities = mergeByIdOrKey(STATE.activities, res.activities || [], ['type', 'subject', 'relatedName']);
+
+    saveAll();
+    renderAll();
+    toast('Pulled data from Sheets ✓');
+  } catch {
+    toast('Sheets pull unavailable', true);
+  }
+}
+
 function renderAll() {
   renderAccountSelect();
   renderContactSelect();
@@ -453,15 +576,8 @@ function renderAll() {
   const contactsFilter = document.getElementById('contactsFilter');
   if (contactsFilter) {
     const selected = contactsFilter.value || 'all';
-    contactsFilter.innerHTML = '<option value="all">ALL_ACCOUNTS</option>' +
-      [...new Set(STATE.accounts.map(a => a.name))].map(a => `<option value="${a}">${a}</option>`).join('');
+    contactsFilter.innerHTML = '<option value="all">ALL_ACCOUNTS</option>' + [...new Set(STATE.accounts.map(a => a.name))].map(a => `<option value="${a}">${a}</option>`).join('');
     if ([...contactsFilter.options].some(o => o.value === selected)) contactsFilter.value = selected;
-  }
-
-  const activitiesFilter = document.getElementById('activitiesFilter');
-  if (activitiesFilter && !activitiesFilter.dataset.init) {
-    activitiesFilter.innerHTML = '<option value="all">ALL_TYPES</option>' + AP.activityTypes.map(t => `<option value="${t}">${t}</option>`).join('');
-    activitiesFilter.dataset.init = '1';
   }
 
   renderLeads();

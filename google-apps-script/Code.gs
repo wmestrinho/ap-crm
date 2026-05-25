@@ -55,7 +55,7 @@ function setupHeaders(sheet, type) {
 
   // Strip client prefix to get base type (e.g. "EvolutionKart_Work" → "Work")
   let baseType = type;
-  const known = ['Work', 'Expenses', 'Costs', 'Invoices', 'Clients', 'Projects'];
+  const known = ['Work', 'Expenses', 'Costs', 'Invoices', 'Clients', 'Projects', 'CRM_Leads', 'CRM_Accounts', 'CRM_Contacts', 'CRM_Opportunities', 'CRM_Activities'];
   for (const k of known) {
     if (type === k || type.endsWith('_' + k)) { baseType = k; break; }
   }
@@ -67,6 +67,11 @@ function setupHeaders(sheet, type) {
     Expenses:  ['Timestamp','LoggedBy','Client','Project','Category','Amount','Description','PaymentMethod','PaymentStatus'],
     Costs:     ['Timestamp','LoggedBy','Category','Amount','PaidBy','PaymentMethod','Description'],
     Invoices:  ['Timestamp','LoggedBy','InvoiceNumber','Client','Project','Contact','Email','Phone','Items','Total','Notes'],
+    CRM_Leads: ['ID','Timestamp','Owner','Name','Company','Email','Phone','Status','Notes'],
+    CRM_Accounts: ['ID','Timestamp','Owner','Name','Industry','Website','Notes'],
+    CRM_Contacts: ['ID','Timestamp','Owner','Account','Name','Role','Email','Phone'],
+    CRM_Opportunities: ['ID','Timestamp','Owner','Account','Name','Stage','Value','CloseDate','Notes'],
+    CRM_Activities: ['ID','Timestamp','Owner','Type','Subject','RelatedType','RelatedName','DueDate','Status','Notes'],
   };
 
   if (headers[baseType]) {
@@ -116,6 +121,12 @@ function route(action, payload) {
     getClientSummary: () => clientSummary(payload.client),
     getClients:       () => clientList(),
     getProjects:      () => projectList(),
+    crmLogLead:       () => appendCRMLead(payload),
+    crmLogAccount:    () => appendCRMAccount(payload),
+    crmLogContact:    () => appendCRMContact(payload),
+    crmLogOpportunity:() => appendCRMOpportunity(payload),
+    crmLogActivity:   () => appendCRMActivity(payload),
+    crmGetAll:        () => crmGetAll(),
   };
   if (!handlers[action]) return { ok: false, error: 'Unknown action: ' + action };
   return handlers[action]();
@@ -244,4 +255,63 @@ function projectList() {
     .filter(r => r[3])
     .map(r => ({ client: r[2], name: r[3] }));
   return { ok: true, projects: projects };
+}
+
+// ── CRM app domain handlers ────────────────────────────────────
+function appendCRMLead(d) {
+  const s = getSheet('CRM_Leads', 'CRM_Leads');
+  s.appendRow([d.id || '', d.createdAt || new Date().toISOString(), d.owner || '', d.name || '', d.company || '', d.email || '', d.phone || '', d.status || 'New', d.notes || '']);
+  return { ok: true };
+}
+
+function appendCRMAccount(d) {
+  const s = getSheet('CRM_Accounts', 'CRM_Accounts');
+  s.appendRow([d.id || '', d.createdAt || new Date().toISOString(), d.owner || '', d.name || '', d.industry || '', d.website || '', d.notes || '']);
+  return { ok: true };
+}
+
+function appendCRMContact(d) {
+  const s = getSheet('CRM_Contacts', 'CRM_Contacts');
+  s.appendRow([d.id || '', d.createdAt || new Date().toISOString(), d.owner || '', d.account || '', d.name || '', d.role || '', d.email || '', d.phone || '']);
+  return { ok: true };
+}
+
+function appendCRMOpportunity(d) {
+  const s = getSheet('CRM_Opportunities', 'CRM_Opportunities');
+  s.appendRow([d.id || '', d.createdAt || new Date().toISOString(), d.owner || '', d.account || '', d.name || '', d.stage || 'Prospecting', d.value || 0, d.closeDate || '', d.notes || '']);
+  return { ok: true };
+}
+
+function appendCRMActivity(d) {
+  const s = getSheet('CRM_Activities', 'CRM_Activities');
+  s.appendRow([d.id || '', d.createdAt || new Date().toISOString(), d.owner || '', d.type || '', d.subject || '', d.relatedType || '', d.relatedName || '', d.dueDate || '', d.status || 'Open', d.notes || '']);
+  return { ok: true };
+}
+
+function mapRows(rows, keys) {
+  return rows.map(r => {
+    const obj = {};
+    keys.forEach((k, i) => obj[k] = r[i] || '');
+    return obj;
+  });
+}
+
+function crmGetAll() {
+  const leads = mapRows(getOrEmpty('CRM_Leads'), ['id','createdAt','owner','name','company','email','phone','status','notes']);
+  const accounts = mapRows(getOrEmpty('CRM_Accounts'), ['id','createdAt','owner','name','industry','website','notes']);
+  const contacts = mapRows(getOrEmpty('CRM_Contacts'), ['id','createdAt','owner','account','name','role','email','phone']);
+  const opportunities = mapRows(getOrEmpty('CRM_Opportunities'), ['id','createdAt','owner','account','name','stage','value','closeDate','notes']).map(o => ({
+    id: o.id,
+    createdAt: o.createdAt,
+    owner: o.owner,
+    account: o.account,
+    name: o.name,
+    stage: o.stage,
+    value: parseFloat(o.value) || 0,
+    closeDate: o.closeDate,
+    notes: o.notes,
+  }));
+  const activities = mapRows(getOrEmpty('CRM_Activities'), ['id','createdAt','owner','type','subject','relatedType','relatedName','dueDate','status','notes']);
+
+  return { ok: true, leads: leads, accounts: accounts, contacts: contacts, opportunities: opportunities, activities: activities };
 }
