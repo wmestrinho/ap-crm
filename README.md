@@ -5,7 +5,7 @@
 Foundation copied from the `hackFatura` app and re-themed to the Absolutely Plausible
 brand (cool watercolour palette, Share Tech Mono).
 
-**Tailoring status — CRM minimal v1 + Phase 2.1 productivity pack complete (v1.5.0):**
+**Tailoring status — CRM minimal v1 + Phase 2.1 modal-edit polish complete (v1.5.1):**
 
 - ✅ Namespace `PCJ` → `AP`; localStorage keys `pcj_*` → `ap_*`
 - ✅ Team set to the AP core: Luiz, Bebeco, Samuel
@@ -97,7 +97,7 @@ Deployment notes:
 - Deployment not fully identified yet. Add exact deploy command/target when this repo is next touched.
 
 Version rule:
-- Current baseline version: `v1.5.0`
+- Current baseline version: `v1.5.1`
 - Keep version source documented.
 - Web UIs must visibly display the version.
 

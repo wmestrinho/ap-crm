@@ -213,6 +213,19 @@
     </div>
   </main>
 
+  <div id="editModal" class="modal-overlay" onclick="closeEditModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:640px;width:min(96vw,640px)">
+      <h3 id="editModalTitle">// Edit</h3>
+      <form id="editModalForm" onsubmit="saveEditModal(event)">
+        <div id="editModalFields"></div>
+        <div class="btn-group">
+          <button class="btn-submit" type="submit">SAVE CHANGES</button>
+          <button class="btn-secondary" type="button" onclick="closeEditModal()">CANCEL</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 
   <footer class="app-footer">

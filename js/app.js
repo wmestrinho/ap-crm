@@ -268,20 +268,72 @@ function refreshDashboard() {
     .join('') || '<div class="card-sub">No opportunities yet.</div>';
 }
 
+const EDIT_STATE = { entity: '', id: '' };
+
+function labelForField(field) {
+  return field
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, s => s.toUpperCase());
+}
+
+function closeEditModal() {
+  document.getElementById('editModal')?.classList.remove('open');
+}
+
 function editEntity(entity, id) {
   const arr = STATE[entity];
   const row = arr.find(r => r.id === id);
   if (!row) return;
-  const patch = {};
-  Object.keys(row).forEach(k => {
-    if (['id', 'createdAt'].includes(k)) return;
-    const v = prompt(`Edit ${k}:`, row[k] ?? '');
-    if (v === null) return;
-    patch[k] = k === 'value' ? Number(v || 0) : normalize(v);
+
+  EDIT_STATE.entity = entity;
+  EDIT_STATE.id = id;
+
+  const title = document.getElementById('editModalTitle');
+  const fields = document.getElementById('editModalFields');
+  if (!title || !fields) return;
+
+  title.textContent = `// Edit ${entity.slice(0, -1).toUpperCase()}`;
+
+  const selectMap = {
+    status: AP.leadStatus,
+    stage: AP.opportunityStages,
+    type: AP.activityTypes
+  };
+
+  fields.innerHTML = Object.keys(row)
+    .filter(k => !['id', 'createdAt'].includes(k))
+    .map(k => {
+      const val = row[k] ?? '';
+      if (selectMap[k]) {
+        const options = selectMap[k].map(v => `<option value="${v}" ${v === val ? 'selected' : ''}>${v}</option>`).join('');
+        return `<div class="form-group"><label>${labelForField(k)}</label><select name="${k}">${options}</select></div>`;
+      }
+      const inputType = k === 'value' ? 'number' : (k === 'email' ? 'email' : (k === 'closeDate' || k === 'dueDate' ? 'date' : 'text'));
+      const step = k === 'value' ? ' step="0.01" min="0"' : '';
+      return `<div class="form-group"><label>${labelForField(k)}</label><input name="${k}" type="${inputType}" value="${String(val).replace(/"/g, '&quot;')}"${step} /></div>`;
+    })
+    .join('');
+
+  document.getElementById('editModal')?.classList.add('open');
+}
+
+function saveEditModal(e) {
+  e.preventDefault();
+  const arr = STATE[EDIT_STATE.entity] || [];
+  const row = arr.find(r => r.id === EDIT_STATE.id);
+  if (!row) return closeEditModal();
+
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  Object.keys(data).forEach(k => {
+    row[k] = k === 'value' ? Number(data[k] || 0) : normalize(data[k]);
   });
-  Object.assign(row, patch);
+
+  if ('name' in row && !row.name) return toast('Name is required', true);
+  if ('account' in row && !row.account) return toast('Account is required', true);
+
   saveAll();
   renderAll();
+  closeEditModal();
   toast('Updated ✓');
 }
 
