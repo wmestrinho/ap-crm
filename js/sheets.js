@@ -1,93 +1,41 @@
 /**
- * AP Ops | Absolutely Plausible — Google Sheets API
- * Talks to the deployed Google Apps Script web app.
- * Uses GET with URL params — Apps Script returns JSON with CORS headers.
+ * AP CRM | Google Sheets bridge (Phase 2)
+ * Best-effort sync: localStorage remains source of truth if offline.
  */
 
 async function sheetsPost(action, payload) {
   const url = AP.SHEETS_SCRIPT_URL;
   if (!url || url.includes('YOUR_SCRIPT_ID')) {
-    // No backend configured — run offline (localStorage only)
-    console.log('[OFFLINE] sheetsPost skipped:', action);
-    return { ok: true, dev: true };
+    return { ok: true, offline: true };
   }
   try {
     const params = new URLSearchParams({
       action,
-      payload: JSON.stringify(payload),
+      payload: JSON.stringify(payload || {})
     });
-    const res = await fetch(`${url}?${params}`, {
-      method: 'GET',
-      redirect: 'follow',
-    });
-    const data = await res.json();
-    return data;
+    const res = await fetch(`${url}?${params}`, { method: 'GET', redirect: 'follow' });
+    return await res.json();
   } catch (err) {
-    console.error('[Sheets Error]', err);
     throw err;
   }
 }
 
-async function pushWork(data) {
-  return sheetsPost('logWork', data);
+async function syncLead(payload) {
+  return sheetsPost('crmLogLead', payload);
 }
 
-async function pushExpense(data) {
-  return sheetsPost('logExpense', data);
+async function syncAccount(payload) {
+  return sheetsPost('crmLogAccount', payload);
 }
 
-async function logWorkCosts(data) {
-  return sheetsPost('logCost', data);
+async function syncContact(payload) {
+  return sheetsPost('crmLogContact', payload);
 }
 
-async function logNewCustomer(data) {
-  return sheetsPost('logNewClient', data);
+async function syncOpportunity(payload) {
+  return sheetsPost('crmLogOpportunity', payload);
 }
 
-async function logNewProject(data) {
-  return sheetsPost('logNewProject', data);
-}
-
-async function logInvoice(data) {
-  return sheetsPost('logInvoice', data);
-}
-
-async function getClientSummary(clientName) {
-  return sheetsPost('getClientSummary', { client: clientName });
-}
-
-async function getClients() {
-  return sheetsPost('getClients', {});
-}
-
-async function getProjects() {
-  return sheetsPost('getProjects', {});
-}
-
-function loadClientDatalist() {
-  const dl = document.getElementById('clientList');
-  if (!dl) return;
-
-  // Seed from local cache immediately (works offline)
-  const render = (names) => {
-    dl.innerHTML = [...new Set(names)].sort()
-      .map(n => `<option value="${n}">`)
-      .join('');
-  };
-  render(STATE.localClients);
-
-  // Attempt to merge from Sheets in background
-  getClients().then(res => {
-    if (res && res.clients && res.clients.length) {
-      res.clients.forEach(n => saveLocalClient(n));
-      render(STATE.localClients);
-    }
-  }).catch(() => {});
-}
-
-function loadProjectDatalist() {
-  const dl = document.getElementById('projectList');
-  if (!dl) return;
-  const names = [...new Set(STATE.projects.map(p => p.name))].sort();
-  dl.innerHTML = names.map(n => `<option value="${n}">`).join('');
+async function syncActivity(payload) {
+  return sheetsPost('crmLogActivity', payload);
 }
