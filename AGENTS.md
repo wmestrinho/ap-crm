@@ -20,12 +20,12 @@ Required baseline for AI agents
 
 Version rule
 - Single source of truth: `VERSION` unless this repo already documents another version source in `README.md` or `CLAUDE.md`.
-- Current baseline version: `v1.2.0`
+- Current baseline version: `v1.6.0`
 - Web UIs must visibly display the version.
 - Bump version for behavior/UI changes.
 
 Deployment
-- Deployment not fully identified yet. Add exact deploy command/target when this repo is next touched.
+- Cloudflare Pages static site. Target: crm.absolutelyplausible.com. No build command, output directory /.
 
 Validation
 - Run: `python3 scripts/validate_agent_baseline.py`

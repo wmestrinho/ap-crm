@@ -55,7 +55,7 @@ Single-page application. All views live in `index.html` as `<div class="view">` 
 
 **Views (`<div class="view">` IDs):** `mainMenu`, `logActivity`, `logExpense`, `invoiceBuilder`, `newCustomer`, `newProject`, `workCosts`, `clientDashboard`
 
-Note: The domain model defines CRM entities (accounts, contacts, leads, opportunities, activities) but the current views are carried over from the AP Ops app foundation. The CRM-specific views (lead list, opportunity pipeline, contact management) are yet to be built. The data layer in `js/config.js` already supports the full CRM model — the UI needs to catch up.
+All CRM views are built: Leads, Accounts, Contacts, Opportunities (pipeline), and Activities — each with search/filter, CSV export, and full CRUD. The data layer and UI are in sync as of v1.6.0.
 
 ## localStorage Keys
 
