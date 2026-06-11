@@ -78,7 +78,7 @@ All CRM views are built: Leads, Accounts, Contacts, Opportunities (pipeline), an
 
 ## Google Apps Script Backend
 
-The AP CRM shares the same Apps Script backend and Google Sheet as AP Ops (mech.robotfantome.com). Both apps write to the same spreadsheet via the same deployed Web App.
+The AP CRM shares the same Apps Script backend and Google Sheet as AP Ops (`ops.absolutelyplausible.com`). Both apps write to the same spreadsheet via the same deployed Web App.
 
 To deploy changes to the shared backend:
 
