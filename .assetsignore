@@ -1,0 +1,36 @@
+# Files Wrangler should NOT upload as public assets.
+# Same syntax as .gitignore. Keeps repo internals off the live site.
+
+# Version control & local agent/workspace config
+.git/
+.claude/
+.gitignore
+
+# Cloudflare config (consumed by the runtime, not served as files)
+wrangler.jsonc
+_headers
+_redirects
+.assetsignore
+
+# Project docs / source that should not be public
+AGENTS.md
+CLAUDE.md
+CLAUDE.md.backup
+README.md
+VERSION
+scripts/
+docs/
+
+# Backend / tooling, not part of the public site
+google-apps-script/
+server.py
+
+# GitHub Pages artifacts (not used on Cloudflare)
+CNAME
+.nojekyll
+
+# Dependencies & junk
+node_modules/
+*.bak
+.DS_Store
+Thumbs.db

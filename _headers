@@ -1,0 +1,29 @@
+# Response headers for Cloudflare Workers Static Assets.
+# Format: a URL pattern, then indented "Header: value" lines.
+# Rules are additive; do not set the same header in two matching rules.
+
+# Security headers on every response
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=()
+  X-XSS-Protection: 0
+
+# Homepage and HTML pages: always revalidate so deploys show immediately
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# CSS / JS are not content-hashed, so revalidate hourly
+/css/*
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/js/*
+  Cache-Control: public, max-age=3600, must-revalidate
+
+# Images, fonts, favicon change rarely
+/assets/*
+  Cache-Control: public, max-age=86400
