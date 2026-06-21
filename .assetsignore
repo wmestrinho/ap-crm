@@ -25,6 +25,11 @@ docs/
 google-apps-script/
 server.py
 
+# Worker source & D1 migrations (code/runtime, not served as files)
+worker/
+migrations/
+.github/
+
 # GitHub Pages artifacts (not used on Cloudflare)
 CNAME
 .nojekyll
