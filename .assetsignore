@@ -34,6 +34,10 @@ migrations/
 CNAME
 .nojekyll
 
+# Local Wrangler state (dev D1 snapshots, cache, deploy tmp/source maps)
+.wrangler/
+*.map
+
 # Dependencies & junk
 node_modules/
 *.bak
