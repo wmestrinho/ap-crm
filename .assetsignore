@@ -25,9 +25,18 @@ docs/
 google-apps-script/
 server.py
 
+# Worker source & D1 migrations (code/runtime, not served as files)
+worker/
+migrations/
+.github/
+
 # GitHub Pages artifacts (not used on Cloudflare)
 CNAME
 .nojekyll
+
+# Local Wrangler state (dev D1 snapshots, cache, deploy tmp/source maps)
+.wrangler/
+*.map
 
 # Dependencies & junk
 node_modules/

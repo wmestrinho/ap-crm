@@ -1,6 +1,6 @@
 /**
  * AP CRM app logic
- * v1.6.0: guardrails, stage quick actions, activity status/overdue, CSV exports, Sheets pull
+ * v1.7.0: data layer on Cloudflare D1 (via Worker /api/*); localStorage is now an offline cache
  */
 
 const EDIT_STATE = { entity: '', id: '' };
@@ -344,6 +344,7 @@ function saveEditModal(e) {
   if ('account' in row && !row.account) return toast('Account is required', true);
 
   saveAll();
+  apiUpdate(EDIT_STATE.entity, EDIT_STATE.id, row).catch(() => toast('Saved locally — sync failed', true));
   renderAll();
   closeEditModal();
   toast('Updated ✓');
@@ -390,6 +391,7 @@ function deleteEntity(entity, id) {
 
   STATE[entity] = (STATE[entity] || []).filter(r => r.id !== id);
   saveAll();
+  apiDelete(entity, id).catch(() => toast('Deleted locally — sync failed', true));
   renderAll();
   toast('Deleted ✓');
 }
@@ -401,6 +403,7 @@ function moveOpportunityToNextStage(id) {
   if (idx < 0 || idx >= AP.opportunityStages.length - 1) return toast('Already at final stage');
   row.stage = AP.opportunityStages[idx + 1];
   saveAll();
+  apiUpdate('opportunities', id, { stage: row.stage }).catch(() => toast('Saved locally — sync failed', true));
   renderAll();
   toast(`Moved to ${row.stage} ✓`);
 }
@@ -410,6 +413,7 @@ function toggleActivityStatus(id) {
   if (!row) return;
   row.status = row.status === 'Done' ? 'Open' : 'Done';
   saveAll();
+  apiUpdate('activities', id, { status: row.status }).catch(() => toast('Saved locally — sync failed', true));
   renderActivities();
   toast(`Activity ${row.status}`);
 }
@@ -420,7 +424,7 @@ async function submitLead(e) {
   const fd = Object.fromEntries(new FormData(e.target).entries());
   const row = { id: crypto.randomUUID(), name: normalize(fd.name), company: normalize(fd.company), email: normalize(fd.email), phone: normalize(fd.phone), status: normalize(fd.status) || 'New', notes: normalize(fd.notes), owner: STATE.currentUser, createdAt: new Date().toISOString() };
   if (!row.name) return toast('Lead name is required', true);
-  STATE.leads.push(row); saveAll(); try { await syncLead(row); } catch (_) {}
+  STATE.leads.push(row); saveAll(); try { await apiCreate('leads', row); } catch (_) { toast('Saved locally — sync failed', true); }
   e.target.reset(); initPickers(); updateOwnerInputs(); renderLeads(); refreshDashboard(); toast('Lead saved ✓');
 }
 
@@ -431,7 +435,7 @@ async function submitAccount(e) {
   const row = { id: crypto.randomUUID(), name: normalize(fd.name), industry: normalize(fd.industry), website: normalize(fd.website), notes: normalize(fd.notes), owner: STATE.currentUser, createdAt: new Date().toISOString() };
   if (!row.name) return toast('Account name is required', true);
   if (STATE.accounts.some(a => key(a.name) === key(row.name))) return toast('Account already exists', true);
-  STATE.accounts.push(row); if (!STATE.currentAccount) setAccount(row.name); saveAll(); try { await syncAccount(row); } catch (_) {}
+  STATE.accounts.push(row); if (!STATE.currentAccount) setAccount(row.name); saveAll(); try { await apiCreate('accounts', row); } catch (_) { toast('Saved locally — sync failed', true); }
   e.target.reset(); updateOwnerInputs(); renderAll(); toast('Account saved ✓');
 }
 
@@ -442,7 +446,7 @@ async function submitContact(e) {
   const row = { id: crypto.randomUUID(), account: normalize(fd.account), name: normalize(fd.name), role: normalize(fd.role), email: normalize(fd.email), phone: normalize(fd.phone), owner: STATE.currentUser, createdAt: new Date().toISOString() };
   if (!row.account || !row.name) return toast('Account and contact name are required', true);
   if (STATE.contacts.some(c => key(c.account) === key(row.account) && key(c.name) === key(row.name))) return toast('Contact already exists for this account', true);
-  STATE.contacts.push(row); if (!STATE.currentContact) setContact(row.name); saveAll(); try { await syncContact(row); } catch (_) {}
+  STATE.contacts.push(row); if (!STATE.currentContact) setContact(row.name); saveAll(); try { await apiCreate('contacts', row); } catch (_) { toast('Saved locally — sync failed', true); }
   e.target.reset(); updateOwnerInputs(); renderAll(); toast('Contact saved ✓');
 }
 
@@ -452,7 +456,7 @@ async function submitOpportunity(e) {
   const fd = Object.fromEntries(new FormData(e.target).entries());
   const row = { id: crypto.randomUUID(), account: normalize(fd.account), name: normalize(fd.name), stage: normalize(fd.stage) || 'Prospecting', value: Number(fd.value || 0), closeDate: normalize(fd.closeDate), notes: normalize(fd.notes), owner: STATE.currentUser, createdAt: new Date().toISOString() };
   if (!row.account || !row.name) return toast('Account and opportunity are required', true);
-  STATE.opportunities.push(row); saveAll(); try { await syncOpportunity(row); } catch (_) {}
+  STATE.opportunities.push(row); saveAll(); try { await apiCreate('opportunities', row); } catch (_) { toast('Saved locally — sync failed', true); }
   e.target.reset(); initPickers(); updateOwnerInputs(); renderAll(); toast('Opportunity saved ✓');
 }
 
@@ -462,7 +466,7 @@ async function submitActivity(e) {
   const fd = Object.fromEntries(new FormData(e.target).entries());
   const row = { id: crypto.randomUUID(), type: normalize(fd.type), subject: normalize(fd.subject), relatedType: normalize(fd.relatedType), relatedName: normalize(fd.relatedName), dueDate: normalize(fd.dueDate), status: normalize(fd.status) || 'Open', notes: normalize(fd.notes), owner: STATE.currentUser, createdAt: new Date().toISOString() };
   if (!row.type || !row.subject || !row.relatedName) return toast('Type, subject and related name are required', true);
-  STATE.activities.push(row); saveAll(); try { await syncActivity(row); } catch (_) {}
+  STATE.activities.push(row); saveAll(); try { await apiCreate('activities', row); } catch (_) { toast('Saved locally — sync failed', true); }
   e.target.reset(); initPickers(); updateOwnerInputs(); renderActivities(); toast('Activity saved ✓');
 }
 
@@ -540,32 +544,31 @@ function exportEntityCSV(entity) {
   toast(`Exported ${rows.length} ${entity} row(s) ✓`);
 }
 
-async function pullFromSheets() {
+// Hydrate from D1 (the source of truth). Remote rows win on id conflict;
+// any local-only rows that never synced are retained as a safety net.
+async function refreshFromDB(announce = true) {
   try {
-    const res = await fetchCRMAll();
-    if (!res?.ok) return toast('Sheets pull failed', true);
+    const res = await apiGetAll();
+    if (!res?.ok) { if (announce) toast('Refresh failed', true); return; }
 
-    const mergeByIdOrKey = (localRows, remoteRows, keys) => {
+    const mergeById = (localRows, remoteRows) => {
       const map = new Map();
-      localRows.forEach(r => map.set(r.id || keys.map(k => key(r[k])).join('|'), r));
-      remoteRows.forEach(r => {
-        const rid = r.id || keys.map(k => key(r[k])).join('|');
-        if (!map.has(rid)) map.set(rid, { ...r, id: r.id || crypto.randomUUID() });
-      });
+      localRows.forEach(r => { if (r.id) map.set(r.id, r); });
+      remoteRows.forEach(r => map.set(r.id, r)); // remote authoritative
       return [...map.values()];
     };
 
-    STATE.accounts = mergeByIdOrKey(STATE.accounts, res.accounts || [], ['name']);
-    STATE.contacts = mergeByIdOrKey(STATE.contacts, res.contacts || [], ['account', 'name']);
-    STATE.leads = mergeByIdOrKey(STATE.leads, res.leads || [], ['name', 'email']);
-    STATE.opportunities = mergeByIdOrKey(STATE.opportunities, res.opportunities || [], ['account', 'name']);
-    STATE.activities = mergeByIdOrKey(STATE.activities, res.activities || [], ['type', 'subject', 'relatedName']);
+    STATE.accounts = mergeById(STATE.accounts, res.accounts || []);
+    STATE.contacts = mergeById(STATE.contacts, res.contacts || []);
+    STATE.leads = mergeById(STATE.leads, res.leads || []);
+    STATE.opportunities = mergeById(STATE.opportunities, res.opportunities || []);
+    STATE.activities = mergeById(STATE.activities, res.activities || []);
 
     saveAll();
     renderAll();
-    toast('Pulled data from Sheets ✓');
+    if (announce) toast('Refreshed from database ✓');
   } catch {
-    toast('Sheets pull unavailable', true);
+    if (announce) toast('Database unavailable — showing cached data', true);
   }
 }
 
@@ -604,6 +607,7 @@ function init() {
   renderAll();
   updateOwnerInputs();
   updateMenuStatus();
+  refreshFromDB(false); // hydrate from D1; falls back to cached localStorage if offline
 }
 
 document.addEventListener('DOMContentLoaded', init);
