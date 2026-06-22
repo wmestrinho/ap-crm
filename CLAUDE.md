@@ -64,7 +64,7 @@ Single-page application. All views live in `index.html` as `<div class="view">` 
 **Data flow:**
 - **D1 is the source of truth; localStorage is a best-effort offline cache.**
 - On load, `refreshFromDB()` calls `GET /api/all` and merges by `id` — remote rows win, local-only rows that never synced are retained as a safety net.
-- Every mutation writes to `STATE` (localStorage) first, then writes through to D1 via `js/api.js`. If the API call fails, the row stays local and the UI shows a "Saved locally — sync failed" toast.
+- Every mutation writes to `STATE` (localStorage) first, then writes through to D1 via `js/api.js`. If the API call fails, the op is recorded in an offline queue (`ap_pending_sync`) and retried automatically on next load, on manual Refresh, and on the browser `online` event (`flushPending()` in `js/api.js`). Flush runs *before* the remote merge so a pending delete/edit isn't resurrected or clobbered. The Worker insert is `INSERT OR REPLACE` so a retried create is idempotent.
 - The dashboard reads from `STATE`, so it stays usable offline.
 
 **Views (`<div class="view">` IDs):** `mainMenu`, `logActivity`, `logExpense`, `invoiceBuilder`, `newCustomer`, `newProject`, `workCosts`, `clientDashboard`
