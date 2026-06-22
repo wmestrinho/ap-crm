@@ -45,8 +45,10 @@ function insertStmt(env, entity, row) {
   if (!cols.includes('id')) cols.unshift('id');
   const values = cols.map((c) => (c === 'id' ? row.id || uuid() : row[c]));
   const placeholders = cols.map(() => '?').join(', ');
+  // INSERT OR REPLACE so retrying an offline-queued create that actually
+  // half-succeeded is idempotent (same id) instead of erroring forever.
   return env.DB
-    .prepare(`INSERT INTO ${entity} (${cols.join(', ')}) VALUES (${placeholders})`)
+    .prepare(`INSERT OR REPLACE INTO ${entity} (${cols.join(', ')}) VALUES (${placeholders})`)
     .bind(...values);
 }
 
