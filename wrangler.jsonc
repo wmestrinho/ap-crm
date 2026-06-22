@@ -3,6 +3,9 @@
   "name": "absolutely-plausible-crm",
   "main": "worker/index.js",
   "compatibility_date": "2026-05-25",
+  "routes": [
+    { "pattern": "crm.absolutelyplausible.com", "custom_domain": true }
+  ],
   "observability": {
     "enabled": true
   },
