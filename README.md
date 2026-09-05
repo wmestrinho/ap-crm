@@ -7,7 +7,7 @@ Separate surface from AP Ops, but reachable from the AP Ops UI and kept in the s
 
 **Status:** live/gated at `crm.absolutelyplausible.com`
 
-**Version:** `v1.6.0`
+**Version:** `v1.8.0`
 
 ## Scope
 
@@ -76,7 +76,7 @@ Deployment notes:
 - Cloudflare Pages static deploy
 
 Version rule:
- - Current baseline version: `v1.6.0`
+ - Current baseline version: `v1.8.0`
 - Keep version source documented.
 - Web UIs must visibly display the version.
 

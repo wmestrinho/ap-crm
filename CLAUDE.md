@@ -45,12 +45,7 @@ Config lives in `wrangler.jsonc`: `main` = `worker/index.js`, the `ASSETS` bindi
 
 ## Version Bumping
 
-Single source of truth: `AP.version` in `js/config.js`. It populates the header badge, menu header, and footer automatically via `init()`. Bump in the same commit as the change.
-
-| Change | Bump |
-|--------|------|
-| Bug fix, style tweak | PATCH (e.g. v1.0.0 → v1.0.1) |
-| New feature | MINOR (e.g. v1.0.x → v1.1.0) |
+Versioning, CHANGELOG, LICENSE, and CI conventions: see `ap-ops-workspace/PROJECT-RULES.md`.
 
 ## Architecture
 

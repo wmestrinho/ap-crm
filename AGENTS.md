@@ -19,10 +19,7 @@ Required baseline for AI agents
 - Run validation before commit.
 
 Version rule
-- Single source of truth: `VERSION` unless this repo already documents another version source in `README.md` or `CLAUDE.md`.
-- Current baseline version: `v1.6.0`
-- Web UIs must visibly display the version.
-- Bump version for behavior/UI changes.
+- Versioning, CHANGELOG, LICENSE, and CI conventions: see `ap-ops-workspace/PROJECT-RULES.md`.
 
 Deployment
 - Cloudflare Pages static site. Target: crm.absolutelyplausible.com. No build command, output directory /.
