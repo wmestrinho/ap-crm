@@ -99,6 +99,7 @@ The backend is a single Worker (`worker/index.js`) bound to a D1 database (`ap-c
 | `PUT` | `/api/:entity/:id` | update the provided allowlisted fields |
 | `DELETE` | `/api/:entity/:id` | delete; `accounts`/`contacts` cascade by **name** to related rows |
 | `POST` | `/api/gumroad-webhook` | Gumroad Ping → insert a `lead` (`source=gumroad`), idempotent by email |
+| `POST` | `/api/whatsapp-webhook` | n8n WhatsApp intake → insert a `lead` (`source=whatsapp`), idempotent by phone |
 
 `:entity` is one of `accounts`, `contacts`, `leads`, `opportunities`, `activities`. Each maps to a D1 table with a per-table column allowlist (`TABLES` in `worker/index.js`) — add new columns there **and** in a migration. Relationships are stored by name (matching the frontend), not by foreign key.
 
@@ -112,6 +113,8 @@ npx wrangler d1 migrations apply ap-crm --remote          # apply to production
 ```
 
 **Gumroad integration:** point a Gumroad Ping at the deployed `/api/gumroad-webhook`. Subscribers land as leads deduped by email. To require a shared secret, set `WEBHOOK_SECRET` (`npx wrangler secret put WEBHOOK_SECRET`) and append `?token=<secret>` to the Ping URL.
+
+**WhatsApp integration:** an n8n workflow (`docs/whatsapp-crm-workflow.json`, setup in `docs/whatsapp-crm-setup-README.md`) parses inbound WhatsApp Business messages and POSTs `{ name, phone, message, project_type }` to `/api/whatsapp-webhook`. Leads land deduped by phone. Same `WEBHOOK_SECRET`/`?token=` pattern as Gumroad. **Note:** `crm.absolutelyplausible.com` is behind Cloudflare Access, which 302s server-to-server callers before they reach the Worker — `/api/gumroad-webhook` has a path-scoped Access Bypass application for this; `/api/whatsapp-webhook` needs the same bypass added in the Cloudflare Zero Trust dashboard before it's reachable from n8n.
 
 **Note:** `AP.SHEETS_SCRIPT_URL` in `js/config.js` is now vestigial — the CRM no longer writes to Google Sheets. (AP Ops at `ops.absolutelyplausible.com` still uses the Apps Script backend independently.)
 

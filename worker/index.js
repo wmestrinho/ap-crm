@@ -9,6 +9,7 @@
  *   PUT    /api/:entity/:id         → update provided fields
  *   DELETE /api/:entity/:id         → delete (accounts/contacts cascade by name)
  *   POST   /api/gumroad-webhook     → Gumroad Ping → insert a lead (source=gumroad)
+ *   POST   /api/whatsapp-webhook    → n8n WhatsApp intake → insert a lead (source=whatsapp)
  */
 
 // Column allowlist per table — also the entity → table map.
@@ -57,6 +58,7 @@ async function handleApi(request, env, url) {
   const [entity, id] = parts;
 
   if (entity === 'gumroad-webhook') return handleGumroad(request, env);
+  if (entity === 'whatsapp-webhook') return handleWhatsapp(request, env);
 
   if (entity === 'all' && request.method === 'GET') {
     return json({ ok: true, ...(await listAll(env)) });
@@ -161,6 +163,52 @@ async function handleGumroad(request, env) {
     notes: 'Imported from Gumroad',
     owner: '',
     source: 'gumroad',
+    createdAt: new Date().toISOString(),
+  };
+  await insertStmt(env, 'leads', row).run();
+  return json({ ok: true, created: true });
+}
+
+// n8n WhatsApp intake posts JSON: { name, phone, message, project_type }.
+// Optional shared secret: set WEBHOOK_SECRET and pass ?token=... on the n8n HTTP Request node.
+async function handleWhatsapp(request, env) {
+  if (request.method !== 'POST') return json({ ok: false, error: 'POST only' }, 405);
+
+  const url = new URL(request.url);
+  if (env.WEBHOOK_SECRET && url.searchParams.get('token') !== env.WEBHOOK_SECRET) {
+    return json({ ok: false, error: 'unauthorized' }, 401);
+  }
+
+  const data = await request.json().catch(() => null);
+  if (!data || typeof data !== 'object') return json({ ok: false, error: 'unparseable body' }, 400);
+
+  const phone = (data.phone || '').toString().trim();
+  if (!phone) return json({ ok: false, error: 'no phone in payload' }, 400);
+
+  const name = (data.name || 'Unknown').toString().trim();
+  const message = (data.message || '').toString().trim();
+  const projectType = (data.project_type || '').toString().trim();
+  const notes = [projectType && `Project type: ${projectType}`, message]
+    .filter(Boolean)
+    .join('\n');
+
+  // Idempotent: skip if this phone number already arrived from WhatsApp.
+  const existing = await env.DB
+    .prepare("SELECT id FROM leads WHERE phone = ? AND source = 'whatsapp'")
+    .bind(phone)
+    .first();
+  if (existing) return json({ ok: true, deduped: true });
+
+  const row = {
+    id: uuid(),
+    name,
+    company: '',
+    email: '',
+    phone,
+    status: 'New',
+    notes,
+    owner: '',
+    source: 'whatsapp',
     createdAt: new Date().toISOString(),
   };
   await insertStmt(env, 'leads', row).run();

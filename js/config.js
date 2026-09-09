@@ -1,11 +1,10 @@
 /**
  * AP CRM | Absolutely Plausible — Config
- * Update SHEETS_SCRIPT_URL after deploying Google Apps Script.
  */
 
 const AP = {
   // ── Version (single source of truth) ────────────────────────
-  version: 'v1.8.0',
+  version: 'v1.9.0',
 
   business: {
     name:    'Absolutely Plausible',

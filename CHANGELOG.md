@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-09-09
+### Added
+- `POST /api/whatsapp-webhook` — n8n WhatsApp intake inserts a lead (`source=whatsapp`), idempotent by phone.
+
 ## [1.8.0] - 2026-09-05
 ### Added
 - Initial changelog baseline.

@@ -1,0 +1,197 @@
+{
+  "name": "WhatsApp → CRM Lead Intake",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "whatsapp-intake"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─── Parse WhatsApp Business API Payload ───────────────────\n// Meta sends messages in a deeply nested structure.\n// This node unwraps it and checks if it's a real text message.\n\nconst body = $input.first().json;\n\nconst entry   = body.entry?.[0];\nconst change  = entry?.changes?.[0];\nconst value   = change?.value;\n\n// If there are no messages in this event, bail out gracefully\nif (!value?.messages || value.messages.length === 0) {\n  return [{ json: { isMessage: false, reason: 'no_messages_in_payload' } }];\n}\n\nconst message = value.messages[0];\nconst contact = value.contacts?.[0];\n\n// Only process text messages (ignore images, audio, reactions, etc.)\nif (message.type !== 'text') {\n  return [{ json: { isMessage: false, reason: `unsupported_type:${message.type}` } }];\n}\n\n// ── Extract core fields ──────────────────────────────────────\nconst senderPhone = message.from;                              // e.g. \"14075551234\"\nconst senderName  = contact?.profile?.name || 'Unknown';      // Display name from WA profile\nconst messageBody = message.text?.body || '';\nconst messageId   = message.id;\nconst receivedAt  = new Date(parseInt(message.timestamp) * 1000).toISOString();\n\nreturn [{\n  json: {\n    isMessage:   true,\n    phone:       senderPhone,\n    name:        senderName,\n    message:     messageBody,\n    messageId:   messageId,\n    receivedAt:  receivedAt,\n    rawPayload:  JSON.stringify(body)\n  }\n}];"
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Parse WhatsApp Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-is-message",
+              "leftValue": "={{ $json.isMessage }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "Is Text Message?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─── Extract & Classify Lead Data ──────────────────────────\n// Runs keyword detection on the message body to guess\n// what type of project the person is reaching out about.\n// Extend the keyword lists below to fit your services.\n\nconst data    = $input.first().json;\nconst message = (data.message || '').toLowerCase();\n\n// ── Project type detection ───────────────────────────────────\nlet projectType = 'General Inquiry';   // default\n\nif (message.includes('shopify') || message.includes('store') || message.includes('ecomm')) {\n  projectType = 'Shopify / E-Commerce';\n} else if (message.includes('web app') || message.includes('webapp') || message.includes('application')) {\n  projectType = 'Web App Development';\n} else if (message.includes('website') || message.includes('landing page') || message.includes('portfolio')) {\n  projectType = 'Website';\n} else if (message.includes('automation') || message.includes('n8n') || message.includes('workflow') || message.includes('zapier')) {\n  projectType = 'Automation / n8n';\n} else if (message.includes('consult') || message.includes('advice') || message.includes('strategy')) {\n  projectType = 'Consulting';\n} else if (message.includes('pallet') || message.includes('furniture') || message.includes('wood')) {\n  projectType = 'DIY / Custom Build';\n} else if (message.includes('music') || message.includes('merch') || message.includes('print') || message.includes('sticker')) {\n  projectType = 'Robot Fantome / Merch';\n}\n\n// ── Build clean notes string ─────────────────────────────────\nconst preview = data.message.slice(0, 300);\nconst notes   = `Auto-intake via WhatsApp.\\nMessage preview: \"${preview}\"${data.message.length > 300 ? '...' : ''}`;\n\nreturn [{\n  json: {\n    ...data,\n    projectType,\n    status:  'new',\n    source:  'whatsapp',\n    notes\n  }\n}];"
+      },
+      "id": "d4e5f6a7-b8c9-0123-defa-234567890123",
+      "name": "Classify Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.absolutelyplausible.com/api/whatsapp-webhook",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "token", "value": "={{ $env.AP_CRM_WEBHOOK_TOKEN }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: $json.name, phone: $json.phone, message: $json.message, project_type: $json.projectType }) }}",
+        "options": {}
+      },
+      "id": "e5f6a7b8-c9d0-1234-efab-345678901234",
+      "name": "Insert Lead → AP CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'ok', message: $json.deduped ? 'Lead already on file' : 'Lead created' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f6a7b8c9-d0e1-2345-fabc-456789012345",
+      "name": "Respond 200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'ignored', reason: $json.reason }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a7b8c9d0-e1f2-3456-abcd-567890123456",
+      "name": "Ignore & Acknowledge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 420]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse WhatsApp Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse WhatsApp Payload": {
+      "main": [
+        [
+          {
+            "node": "Is Text Message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Text Message?": {
+      "main": [
+        [
+          {
+            "node": "Classify Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore & Acknowledge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Lead": {
+      "main": [
+        [
+          {
+            "node": "Insert Lead → AP CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Lead → AP CRM": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "absolutely-plausible-solutions"
+  },
+  "id": "whatsapp-crm-intake-v1",
+  "tags": [
+    { "id": "tag-crm",       "name": "CRM" },
+    { "id": "tag-whatsapp",  "name": "WhatsApp" },
+    { "id": "tag-intake",    "name": "Lead Intake" }
+  ]
+}

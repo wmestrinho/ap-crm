@@ -7,7 +7,7 @@ Separate surface from AP Ops, but reachable from the AP Ops UI and kept in the s
 
 **Status:** live/gated at `crm.absolutelyplausible.com`
 
-**Version:** `v1.8.0`
+**Version:** `1.9.0`
 
 ## Scope
 
@@ -21,40 +21,37 @@ Separate surface from AP Ops, but reachable from the AP Ops UI and kept in the s
 
 - Separate repo: `ap-crm`
 - Linked from AP Ops, but not merged into it
-- Shared backend pattern with AP Ops until the CRM handlers are fully built
 
 ## Stack
 
 | Layer | Tech | Cost |
 |-------|------|------|
 | Frontend | Static HTML/CSS/JS | $0 |
-| CRM UI | Static HTML/CSS/JS | $0 |
-| Backend API | Google Apps Script Web App | $0 |
-| Database | Google Sheets | $0 |
+| Backend API | Cloudflare Worker | $0 (free tier) |
+| Database | Cloudflare D1 | $0 (free tier) |
 
-**Total: $0/month.** Deployment target: **`crm.absolutelyplausible.com`**. Cloudflare Pages - pure static, no build step.
+Deployment target: **`crm.absolutelyplausible.com`** — a Cloudflare Worker (`absolutely-plausible-crm`) serves the static assets and the `/api/*` JSON API in one deploy; no build step.
 
 ## Dev
 
 ```bash
-python3 server.py 5500
+npx wrangler dev
 ```
 
-Opens at `http://localhost:5500`. Pure static - no build step, no npm, no bundler.
+Runs the Worker locally with the static assets and a local D1 database, so `/api/*` works end to end.
 
-## TODO
+```bash
+python3 server.py 5500   # static-only, no API — falls back to the localStorage cache
+```
 
-- Build the CRM-specific views for leads, accounts, contacts, and opportunities
-- Finish the CRM Apps Script handlers so CRM entities persist cleanly
-- Keep the AP Ops link prominent so the two apps stay connected but separate
+## Deployment
 
-## Backend setup
+```bash
+npx wrangler d1 migrations apply ap-crm --remote   # apply pending schema changes first
+npx wrangler deploy                                # deploy the Worker + assets
+```
 
-1. Create a Google Spreadsheet; copy its Sheet ID.
-2. [script.google.com](https://script.google.com) -> New Project -> paste `google-apps-script/Code.gs`.
-3. Deploy -> New Deployment -> Web App (Execute as: **Me** | Access: **Anyone**).
-4. Paste the Web App URL into `AP.SHEETS_SCRIPT_URL` in `js/config.js` (currently empty).
-5. Paste the Sheet ID into `SPREADSHEET_ID` in `google-apps-script/Code.gs` (currently empty).
+See `CLAUDE.md` for the full API route table, schema/migration workflow, and webhook integrations (Gumroad, WhatsApp via n8n).
 
 ---
 
@@ -73,10 +70,10 @@ Before editing:
 
 Deployment notes:
 - Deployment target: `crm.absolutelyplausible.com`
-- Cloudflare Pages static deploy
+- Cloudflare Worker deploy (`npx wrangler deploy`), not Pages — see **Deployment** above
 
 Version rule:
- - Current baseline version: `v1.8.0`
+ - Current baseline version: `1.9.0`
 - Keep version source documented.
 - Web UIs must visibly display the version.
 
