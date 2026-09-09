@@ -27,6 +27,19 @@ if readme.exists():
         if phrase.lower() not in txt.lower():
             errors.append(f"README.md missing {phrase} notes")
 
+# Responsive / Mobile Standard (~/.claude/standards/responsive-standard.md):
+# viewport meta on every shipped page, no overflow-x:hidden on body, etc.
+sys.path.insert(0, str(ROOT / "scripts"))
+try:
+    import check_responsive
+except ImportError:
+    errors.append("Missing responsive check: scripts/check_responsive.py")
+else:
+    resp_errors, resp_warnings = check_responsive.run()
+    for warning in resp_warnings:
+        print(f"WARN  {warning}")
+    errors.extend(resp_errors)
+
 if errors:
     print("AGENT BASELINE VALIDATION FAILED")
     for error in errors:

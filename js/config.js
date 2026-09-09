@@ -4,7 +4,7 @@
 
 const AP = {
   // ── Version (single source of truth) ────────────────────────
-  version: 'v1.10.0',
+  version: 'v1.11.0',
 
   business: {
     name:    'Absolutely Plausible',

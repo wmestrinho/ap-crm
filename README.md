@@ -7,7 +7,7 @@ Separate surface from AP Ops, but reachable from the AP Ops UI and kept in the s
 
 **Status:** live/gated at `crm.absolutelyplausible.com`
 
-**Version:** `1.10.0`
+**Version:** `1.11.0`
 
 ## Scope
 
@@ -73,10 +73,13 @@ Deployment notes:
 - Cloudflare Worker deploy (`npx wrangler deploy`), not Pages — see **Deployment** above
 
 Version rule:
- - Current baseline version: `1.10.0`
+ - Current baseline version: `1.11.0`
 - Keep version source documented.
 - Web UIs must visibly display the version.
 
 Validation:
-- Run `python3 scripts/validate_agent_baseline.py`.
+- Run `python3 scripts/validate_agent_baseline.py`. It also runs `scripts/check_responsive.py`
+  (workspace Responsive / Mobile Standard: viewport meta on every page, no
+  `overflow-x: hidden` on `body`, canonical breakpoints 600/900/1200). Copied
+  verbatim from `ap-ops`; only its config block is repo-specific.
 - Also run project-specific tests/builds when present.

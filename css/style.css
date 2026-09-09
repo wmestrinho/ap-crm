@@ -31,6 +31,15 @@
   --cyan:          #5cb0ad;
   --cyan-dim:      rgba(92, 176, 173, 0.12);
   --radius:        4px;
+
+  /* Layout tokens — workspace Responsive / Mobile Standard (brand-tokens §3b).
+     Breakpoints are not tokens: sm 600px · md 900px · lg 1200px, named in a
+     comment beside each @media. */
+  --container:   1100px;
+  --gutter:      clamp(14px, 4vw, 24px);
+  --card-min:    200px;   /* internal tool: dense HUD tiles */
+  --card-min-lg: 280px;   /* menu cards */
+  --space-1: .25rem; --space-2: .5rem; --space-3: 1rem; --space-4: 2rem;
   --font-ui:      'Share Tech Mono', 'Courier New', monospace;
   --font-display: 'Share Tech Mono', 'Courier New', monospace;
   --font-mono:    'Share Tech Mono', 'Courier New', monospace;
@@ -47,7 +56,6 @@ body {
   font-size: 15px;
   line-height: 1.5;
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 /* ── SCANLINE OVERLAY ────────────────────────────────────────── */
@@ -93,9 +101,9 @@ body::after {
 }
 
 .header-inner {
-  max-width: 1100px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 var(--gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -111,6 +119,7 @@ body::after {
 
 .logo {
   height: 52px;
+  width: auto;
   border-radius: 4px;
   filter: drop-shadow(0 0 10px rgba(63, 125, 156, 0.5));
 }
@@ -237,9 +246,9 @@ body::after {
    CONTAINER & VIEWS
 ══════════════════════════════════════════════════════════════ */
 .container {
-  max-width: 1100px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 32px 24px 80px;
+  padding: 32px var(--gutter) 80px;
   position: relative;
   z-index: 1;
 }
@@ -282,12 +291,9 @@ body::after {
 
 .menu-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(var(--card-min-lg), 1fr));
   gap: 14px;
 }
-
-@media (max-width: 768px) { .menu-grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 480px) { .menu-grid { grid-template-columns: 1fr; } }
 
 .menu-card {
   background: var(--surface);
@@ -457,11 +463,10 @@ body::after {
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
 }
-
-@media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+@media (min-width: 600px) { /* sm */ .form-row { grid-template-columns: 1fr 1fr; } }
 
 .form-group {
   display: flex;
@@ -874,12 +879,10 @@ optgroup { color: var(--text-dim); }
 ══════════════════════════════════════════════════════════════ */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(var(--card-min), 1fr));
   gap: 14px;
   margin-bottom: 20px;
 }
-
-@media (max-width: 600px) { .dashboard-grid { grid-template-columns: 1fr 1fr; } }
 
 .dash-card {
   background: var(--surface);
@@ -1184,7 +1187,7 @@ optgroup { color: var(--text-dim); }
   letter-spacing: 2px;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 600px) { /* sm */
   .detail-row   { flex-direction: column; align-items: flex-start; gap: 6px; }
   .detail-meta  { flex-wrap: wrap; gap: 8px; }
   .detail-time  { display: none; }
@@ -1376,7 +1379,15 @@ optgroup { color: var(--text-dim); }
 /* ══════════════════════════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════════════════════════ */
-@media (max-width: 600px) {
+/* md: brand + HUD controls no longer fit on one row below ~950px; let the
+   controls wrap under the brand instead of pushing the page wider. This
+   overflow used to be masked by body{overflow-x:hidden} (removed 2026-09-09). */
+@media (max-width: 900px) { /* md */
+  .header-inner { flex-wrap: wrap; height: auto; padding-top: 10px; padding-bottom: 10px; row-gap: 8px; }
+  .header-right { flex-wrap: wrap; justify-content: flex-end; row-gap: 8px; }
+}
+
+@media (max-width: 600px) { /* sm */
   /* ── Header: stack into 3 rows ─────────────────────────────── */
   .header-inner {
     height: auto;
@@ -1422,11 +1433,16 @@ optgroup { color: var(--text-dim); }
   }
 
   /* ── General layout ─────────────────────────────────────────── */
-  .container { padding: 20px 14px 60px; }
+  .container { padding: 20px var(--gutter) 60px; }
   .form-card { padding: 18px; }
   .line-items-header,
   .line-item {
     grid-template-columns: 2fr 60px 80px 80px 32px;
   }
-  .dashboard-grid { grid-template-columns: 1fr 1fr; }
+
+  /* ── Touch targets ≥ 44px (responsive-standard §1.7) ─────────── */
+  .hud-select, .btn-submit, .btn-secondary, .btn-back,
+  select, textarea,
+  input:not([type="checkbox"]):not([type="radio"]) { min-height: 44px; }
+  .btn-icon { width: 44px; height: 44px; }
 }
