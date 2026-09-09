@@ -10,3 +10,6 @@
 
 # Editor artifacts
 .vscode/
+
+# Python bytecode (scripts/)
+__pycache__/
