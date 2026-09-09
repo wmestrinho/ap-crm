@@ -9,7 +9,8 @@
  *   PUT    /api/:entity/:id         → update provided fields
  *   DELETE /api/:entity/:id         → delete (accounts/contacts cascade by name)
  *   POST   /api/gumroad-webhook     → Gumroad Ping → insert a lead (source=gumroad)
- *   POST   /api/whatsapp-webhook    → n8n WhatsApp intake → insert a lead (source=whatsapp)
+ *   GET    /api/whatsapp-webhook    → Meta webhook verification handshake
+ *   POST   /api/whatsapp-webhook    → Meta WhatsApp message → insert a lead (source=whatsapp)
  */
 
 // Column allowlist per table — also the entity → table map.
@@ -169,28 +170,64 @@ async function handleGumroad(request, env) {
   return json({ ok: true, created: true });
 }
 
-// n8n WhatsApp intake posts JSON: { name, phone, message, project_type }.
-// Optional shared secret: set WEBHOOK_SECRET and pass ?token=... on the n8n HTTP Request node.
-async function handleWhatsapp(request, env) {
-  if (request.method !== 'POST') return json({ ok: false, error: 'POST only' }, 405);
+// Keyword → project-type classification for inbound WhatsApp messages.
+const WHATSAPP_PROJECT_KEYWORDS = [
+  { match: ['shopify', 'store', 'ecomm'], type: 'Shopify / E-Commerce' },
+  { match: ['web app', 'webapp', 'application'], type: 'Web App Development' },
+  { match: ['website', 'landing page', 'portfolio'], type: 'Website' },
+  { match: ['automation', 'n8n', 'workflow', 'zapier'], type: 'Automation / n8n' },
+  { match: ['consult', 'advice', 'strategy'], type: 'Consulting' },
+  { match: ['pallet', 'furniture', 'wood'], type: 'DIY / Custom Build' },
+  { match: ['music', 'merch', 'print', 'sticker'], type: 'Robot Fantome / Merch' },
+];
 
+function classifyWhatsappLead(message) {
+  const lower = message.toLowerCase();
+  for (const { match, type } of WHATSAPP_PROJECT_KEYWORDS) {
+    if (match.some((kw) => lower.includes(kw))) return type;
+  }
+  return 'General Inquiry';
+}
+
+// Meta calls this endpoint directly — no middleman workflow tool.
+// GET is the one-time verification handshake (WhatsApp → Configuration → Webhook).
+// POST delivers each inbound message event; must always ack fast with 200 or Meta retries.
+// Optional shared secret: set WEBHOOK_SECRET and append ?token=... to the Webhook URL you give Meta.
+async function handleWhatsapp(request, env) {
   const url = new URL(request.url);
+
+  if (request.method === 'GET') {
+    const mode = url.searchParams.get('hub.mode');
+    const token = url.searchParams.get('hub.verify_token');
+    const challenge = url.searchParams.get('hub.challenge') || '';
+    if (mode === 'subscribe' && env.WHATSAPP_VERIFY_TOKEN && token === env.WHATSAPP_VERIFY_TOKEN) {
+      return new Response(challenge, { status: 200, headers: { 'content-type': 'text/plain' } });
+    }
+    return json({ ok: false, error: 'verification failed' }, 403);
+  }
+
+  if (request.method !== 'POST') return json({ ok: false, error: 'method not allowed' }, 405);
+
   if (env.WEBHOOK_SECRET && url.searchParams.get('token') !== env.WEBHOOK_SECRET) {
     return json({ ok: false, error: 'unauthorized' }, 401);
   }
 
-  const data = await request.json().catch(() => null);
-  if (!data || typeof data !== 'object') return json({ ok: false, error: 'unparseable body' }, 400);
+  const body = await request.json().catch(() => null);
+  // Ack malformed/unrelated payloads (e.g. status callbacks) so Meta doesn't retry forever.
+  if (!body || typeof body !== 'object') return json({ ok: true, ignored: true });
 
-  const phone = (data.phone || '').toString().trim();
-  if (!phone) return json({ ok: false, error: 'no phone in payload' }, 400);
+  const value = body.entry?.[0]?.changes?.[0]?.value;
+  const message = value?.messages?.[0];
+  if (!message || message.type !== 'text') return json({ ok: true, ignored: true });
 
-  const name = (data.name || 'Unknown').toString().trim();
-  const message = (data.message || '').toString().trim();
-  const projectType = (data.project_type || '').toString().trim();
-  const notes = [projectType && `Project type: ${projectType}`, message]
-    .filter(Boolean)
-    .join('\n');
+  const phone = (message.from || '').toString().trim();
+  if (!phone) return json({ ok: true, ignored: true });
+
+  const contact = value.contacts?.[0];
+  const name = (contact?.profile?.name || 'Unknown').toString().trim();
+  const text = (message.text?.body || '').toString().trim();
+  const projectType = classifyWhatsappLead(text);
+  const notes = [`Project type: ${projectType}`, text].filter(Boolean).join('\n');
 
   // Idempotent: skip if this phone number already arrived from WhatsApp.
   const existing = await env.DB
