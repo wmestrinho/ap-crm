@@ -13,6 +13,11 @@ Checks:
   WARN  @media width values outside the canonical set {600, 900, 1200} px with no
         same-line comment documenting the component exception
   WARN  a file that renders <table> without any table-wrap class in the same file
+  WARN  grid-template-columns with a bare `1fr` track (auto minimum → one long
+        string blows the column out; standard §1.12 wants minmax(0, 1fr))
+  WARN  a form control styled below 16px (iOS Safari zooms the viewport on focus
+        and never zooms back, which reads as "the page scrolls sideways";
+        standard §1.11)
 
 Standard: ~/.claude/standards/responsive-standard.md
 """
@@ -36,12 +41,41 @@ TABLE_WRAP_CLASSES = ("table-wrap",)  # substring match; "hq-table-wrap" counts
 VIEWPORT_RE = re.compile(r'<meta\s+[^>]*name\s*=\s*["\']viewport["\'][^>]*>', re.I)
 CONTENT_RE = re.compile(r'content\s*=\s*["\']([^"\']*)["\']', re.I)
 ZOOM_LOCK_RE = re.compile(r'user-scalable\s*=\s*(?:no|0)|maximum-scale\s*=\s*1(?:\.0+)?(?![\d.])', re.I)
+GRID_COLS_RE = re.compile(r'grid-template-columns\s*:\s*([^;{}]+)', re.I)
+def _strip_minmax(value: str) -> str:
+    """Remove every minmax(...) call, nested parentheses included (var(--x) inside)."""
+    out, i = [], 0
+    while True:
+        j = value.lower().find("minmax(", i)
+        if j < 0:
+            out.append(value[i:]); return "".join(out)
+        out.append(value[i:j]); depth, k = 0, j + len("minmax")
+        while k < len(value):
+            if value[k] == "(": depth += 1
+            elif value[k] == ")":
+                depth -= 1
+                if depth == 0: break
+            k += 1
+        i = k + 1
+BARE_1FR_RE = re.compile(r'(?<![\w.-])1fr\b')
 # selector list made only of html/body (not body::before, not .body-x)
 ROOT_RULE_RE = re.compile(
     r'(?<![\w.#\-:])((?:html|body)(?:\s*,\s*(?:html|body))*)\s*\{([^}]*)\}', re.I)
 OVERFLOW_RE = re.compile(r'overflow(?:-x)?\s*:\s*hidden', re.I)
 MEDIA_WIDTH_RE = re.compile(
     r'@media[^{]*?\((?:min|max)-width\s*:\s*(\d+(?:\.\d+)?)\s*(px|em|rem)\s*\)', re.I)
+
+# Any rule body, with its selector list. `[^{}]` never crosses a brace, so the
+# prelude of an @media block is skipped and its inner rules match on their own.
+RULE_RE = re.compile(r'([^{}]+)\{([^{}]*)\}')
+FONT_SIZE_RE = re.compile(r'(?:^|;)\s*font-size\s*:\s*([^;}!]+)', re.I)
+# The subject of a selector: the last compound after any combinator.
+SUBJECT_RE = re.compile(r'[^\s>+~]+$')
+CONTROL_RE = re.compile(r'^(input|select|textarea)\b', re.I)
+# Types that are not text fields, so focusing them never triggers the zoom.
+NON_TEXT_INPUT_RE = re.compile(
+    r'type\s*[~|^$*]?=\s*["\']?(checkbox|radio|file|hidden|submit|reset|button|image|range|color)',
+    re.I)
 
 
 def _iter_files(suffixes: tuple[str, ...], roots: list[str] | None = None):
@@ -110,6 +144,82 @@ def check_css(errors: list[str], warnings: list[str]) -> None:
                     "(600/900/1200) and has no same-line comment")
 
 
+def check_bare_1fr(warnings: list[str]) -> None:
+    """WARN on grid-template-columns tracks that use a bare `1fr` (standard §1.12)."""
+    for path in _iter_files((".css",), AUTHORED_CSS):
+        css = _strip_comments(path.read_text(encoding="utf-8", errors="replace"))
+        for m in GRID_COLS_RE.finditer(css):
+            value = _strip_minmax(m.group(1))
+            if BARE_1FR_RE.search(value):
+                line = css[: m.start()].count("\n") + 1
+                warnings.append(f"{_rel(path)}:{line}: bare 1fr track in grid-template-columns "
+                                f"({m.group(1).strip()[:60]}) — use minmax(0, 1fr) (standard §1.12)")
+
+
+def _font_size_px(value: str) -> float | None:
+    """Resolve a font-size to px where it can be done statically.
+
+    em is treated as 16px-relative: it compounds through ancestors, so this is a
+    heuristic, but a control at under 1em is under 16px unless something up the
+    tree enlarged it — rare, and a warning is the right weight for that.
+    Returns None for values that cannot be judged (calc, var, keywords, clamp).
+    """
+    value = value.strip().lower()
+    m = re.fullmatch(r'([\d.]+)(px|rem|em|pt|%)', value)
+    if not m:
+        return None            # calc(), var(), clamp(), medium, larger, …
+    number, unit = float(m.group(1)), m.group(2)
+    return {
+        "px": number,
+        "rem": number * 16,
+        "em": number * 16,
+        "pt": number * 96 / 72,
+        "%": number * 16 / 100,
+    }[unit]
+
+
+def check_control_font_size(warnings: list[str]) -> None:
+    """WARN on form controls styled below 16px (standard §1.11).
+
+    iOS Safari zooms the viewport when a text control under 16px takes focus and
+    does not zoom back, leaving the page wider than the screen and panning
+    sideways. It presents as a layout bug and is not one, so it is worth naming
+    explicitly rather than leaving to a device check.
+
+    Limit: only element-typed selectors are visible here. A control styled
+    through a class alone (`.note { font-size: .85rem }` on a <textarea>) cannot
+    be resolved without the HTML, so this narrows the gap rather than closing
+    it — the device probe in standard §5 stays the pass/fail line.
+    """
+    for path in _iter_files((".css",), AUTHORED_CSS):
+        css = _strip_comments(path.read_text(encoding="utf-8", errors="replace"))
+        for rule in RULE_RE.finditer(css):
+            selectors, body = rule.group(1), rule.group(2)
+            fs = FONT_SIZE_RE.search(body)
+            if not fs:
+                continue
+            px = _font_size_px(fs.group(1))
+            if px is None or px >= 16:
+                continue
+            for selector in selectors.split(","):
+                selector = selector.strip()
+                if not selector or selector.startswith("@"):
+                    continue
+                subject = SUBJECT_RE.search(selector)
+                if not subject or not CONTROL_RE.match(subject.group(0)):
+                    continue
+                if "::" in subject.group(0):
+                    continue   # ::placeholder sizing does not drive the zoom
+                if NON_TEXT_INPUT_RE.search(subject.group(0)):
+                    continue   # checkbox, radio, file … never trigger the zoom
+                line = css[: rule.start()].count("\n") + 1
+                warnings.append(
+                    f"{_rel(path)}:{line}: `{selector}` sets font-size "
+                    f"{fs.group(1).strip()} (~{px:.0f}px) — form controls must be "
+                    "16px or larger or iOS Safari zooms on focus (standard §1.11)")
+                break
+
+
 def check_tables(warnings: list[str]) -> None:
     files = list(_iter_files((".html",))) + list(_iter_files((".js",), TEMPLATE_JS))
     for path in files:
@@ -127,6 +237,8 @@ def run() -> tuple[list[str], list[str]]:
     check_viewport(errors)
     check_css(errors, warnings)
     check_tables(warnings)
+    check_bare_1fr(warnings)
+    check_control_font_size(warnings)
     return errors, warnings
 
 
