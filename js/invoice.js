@@ -16,9 +16,9 @@ function addLineItem(desc = '', qty = 1, unit = '') {
   row.id = `li_${id}`;
   row.innerHTML = `
     <input type="text"   id="li_desc_${id}"  placeholder="Service or part description" value="${desc}" oninput="recalcLine(${id})" />
-    <input type="number" id="li_qty_${id}"   value="${qty}"  min="1" step="1"    oninput="recalcLine(${id})" style="text-align:center" />
-    <input type="number" id="li_unit_${id}"  value="${unit}" min="0" step="0.01" oninput="recalcLine(${id})" placeholder="0.00" />
-    <div class="line-total" id="li_total_${id}">$0.00</div>
+    <input type="number" id="li_qty_${id}"   value="${qty}"  min="1" step="1"    oninput="recalcLine(${id})" style="text-align:center" aria-label="Quantity" title="Quantity" />
+    <input type="number" id="li_unit_${id}"  value="${unit}" min="0" step="0.01" oninput="recalcLine(${id})" placeholder="0.00" aria-label="Unit price" title="Unit price" />
+    <div class="line-total" id="li_total_${id}" aria-label="Line total">$0.00</div>
     <button class="remove-line" onclick="removeLine(${id})">✕</button>
   `;
   list.appendChild(row);

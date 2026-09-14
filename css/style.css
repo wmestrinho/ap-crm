@@ -463,10 +463,10 @@ body::after {
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
 }
-@media (min-width: 600px) { /* sm */ .form-row { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 600px) { /* sm */ .form-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 
 .form-group {
   display: flex;
@@ -484,13 +484,16 @@ label {
   letter-spacing: 2px;
 }
 
+/* 1rem is the floor, not a preference: iOS Safari zooms the viewport when a
+   control under 16px takes focus and never zooms back, leaving the page wider
+   than the screen (responsive-standard §1.11). */
 input, select, textarea {
   background: var(--surface2);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 10px 14px;
   border-radius: var(--radius);
-  font-size: 0.92rem;
+  font-size: 1rem;
   font-family: var(--font-ui);
   transition: all 0.2s;
   width: 100%;
@@ -634,7 +637,7 @@ optgroup { color: var(--text-dim); }
   align-items: center;
 }
 
-.line-item input { padding: 8px 10px; font-size: 0.88rem; }
+.line-item input { padding: 8px 10px; font-size: 1rem; }  /* §1.11 floor */
 
 .line-total {
   background: var(--surface2);
@@ -1399,7 +1402,7 @@ optgroup { color: var(--text-dim); }
 
   .header-right {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 6px;
     align-items: end;
   }
@@ -1435,9 +1438,36 @@ optgroup { color: var(--text-dim); }
   /* ── General layout ─────────────────────────────────────────── */
   .container { padding: 20px var(--gutter) 60px; }
   .form-card { padding: 18px; }
-  .line-items-header,
+  /* Five fixed columns could not fit a phone: at 320px the row was 284px of
+     tracks and gaps before the description got any width, so the page itself
+     scrolled sideways (§1.10). The description takes its own row and the
+     figures share the next one. The header row maps to the old five columns
+     and cannot follow, so it goes; the inputs carry aria-labels instead. */
+  .line-items-header {
+    display: none;
+  }
+
   .line-item {
-    grid-template-columns: 2fr 60px 80px 80px 32px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1.15fr) 44px;
+    row-gap: 6px;
+  }
+
+  .line-item > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .line-item input {
+    padding: 8px 6px;
+  }
+
+  /* The spinners cost ~15px per field and are the wrong affordance on touch —
+     a number input already raises the numeric keypad. Reclaiming that width is
+     what keeps the figures unclipped at 320px. */
+  .line-item input[type="number"]::-webkit-inner-spin-button,
+  .line-item input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
   }
 
   /* ── Touch targets ≥ 44px (responsive-standard §1.7) ─────────── */
