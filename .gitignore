@@ -13,3 +13,6 @@
 
 # Python bytecode (scripts/)
 __pycache__/
+
+# Output of scripts/qa/mobile_probe.js (responsive-standard §5) — never committed.
+mobile-shots/
