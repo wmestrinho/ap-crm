@@ -58,7 +58,7 @@ Single-page application. All views live in `index.html` as `<div class="view">` 
 
 **Data flow:**
 - **D1 is the source of truth; localStorage is a best-effort offline cache.**
-- On load, `refreshFromDB()` calls `GET /api/all` and merges by `id` — remote rows win, local-only rows that never synced are retained as a safety net.
+- On load, `refreshFromDB()` calls `GET /api/all` and merges by `id` — remote rows win, local-only rows that never synced are retained as a safety net. The Worker requires a Cloudflare Access-authenticated request or `Authorization: Bearer CRM_API_TOKEN` for CRUD API requests. Configure the custom domain behind Access; use the token only for trusted server-to-server clients.
 - Every mutation writes to `STATE` (localStorage) first, then writes through to D1 via `js/api.js`. If the API call fails, the op is recorded in an offline queue (`ap_pending_sync`) and retried automatically on next load, on manual Refresh, and on the browser `online` event (`flushPending()` in `js/api.js`). Flush runs *before* the remote merge so a pending delete/edit isn't resurrected or clobbered. The Worker insert is `INSERT OR REPLACE` so a retried create is idempotent.
 - The dashboard reads from `STATE`, so it stays usable offline.
 
@@ -93,7 +93,7 @@ The backend is a single Worker (`worker/index.js`) bound to a D1 database (`ap-c
 
 | Method | Path | Behavior |
 |--------|------|----------|
-| `GET` | `/api/all` | `{ ok, accounts, contacts, leads, opportunities, activities }` |
+| `GET` | `/api/all` | `{ ok, accounts, contacts, leads, opportunities, activities }` | Cloudflare Access or `Authorization: Bearer CRM_API_TOKEN` |
 | `GET` | `/api/:entity` | list rows for one entity |
 | `POST` | `/api/:entity` | insert a row (body = full object; `id` auto-filled if absent) |
 | `PUT` | `/api/:entity/:id` | update the provided allowlisted fields |

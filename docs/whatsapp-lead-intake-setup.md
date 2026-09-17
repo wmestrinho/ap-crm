@@ -23,12 +23,13 @@ npx wrangler secret put WHATSAPP_VERIFY_TOKEN
 
 Pick any string (e.g. `aps-whatsapp-2026`) — you'll enter the same value in Meta's app config in Step 3.
 
-### Step 2 — (Optional) Require a Shared Secret
+### Step 2 — Configure the Required Shared Secrets
 
-The endpoint reuses the same `WEBHOOK_SECRET` as the Gumroad webhook. If it's set, append `?token=<secret>` to the Webhook URL you give Meta in Step 3 — Meta preserves query params on both the verification GET and every message POST.
+The endpoint requires the same `WEBHOOK_SECRET` as the Gumroad webhook. Append `?token=<secret>` to the Webhook URL you give Meta in Step 3 — Meta preserves query params on both the verification GET and every message POST.
 
 ```bash
 npx wrangler secret put WEBHOOK_SECRET   # skip if already set for Gumroad
+npx wrangler secret put WHATSAPP_APP_SECRET
 ```
 
 ### Step 3 — Connect WhatsApp Business API (Meta)
@@ -39,8 +40,9 @@ You need a **Meta Developer App** connected to a WhatsApp Business account.
 2. Create an app → choose **Business** type
 3. Add the **WhatsApp** product
 4. Under **WhatsApp → Configuration**:
-   - **Webhook URL**: `https://crm.absolutelyplausible.com/api/whatsapp-webhook` (append `?token=<WEBHOOK_SECRET>` if you set one in Step 2)
+   - **Webhook URL**: `https://crm.absolutelyplausible.com/api/whatsapp-webhook?token=WEBHOOK_SECRET`
    - **Verify Token**: the same value you set as `WHATSAPP_VERIFY_TOKEN` in Step 1
+   - Meta must send `X-Hub-Signature-256`, which the Worker verifies with `WHATSAPP_APP_SECRET`.
    - Subscribe to the **messages** webhook field
 5. Add a test phone number and send a message to verify it's flowing
 
