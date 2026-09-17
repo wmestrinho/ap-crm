@@ -28,6 +28,35 @@ const json = (data, status = 200) =>
     headers: { 'content-type': 'application/json; charset=utf-8' },
   });
 
+function isAuthorizedApiRequest(request, env) {
+  const accessUser = request.headers.get('cf-access-authenticated-user-email');
+  if (accessUser) return true;
+  const expected = env.CRM_API_TOKEN;
+  if (!expected) return false;
+  const authorization = request.headers.get('authorization') || '';
+  return authorization.startsWith('Bearer ') &&
+    authorization.slice('Bearer '.length) === expected;
+}
+
+async function hmacHex(value, secret) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
+  return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function constantTimeEqual(left, right) {
+  if (!left || !right || left.length !== right.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < left.length; i += 1) mismatch |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  return mismatch === 0;
+}
+
 const uuid = () =>
   (crypto.randomUUID && crypto.randomUUID()) ||
   'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
@@ -60,6 +89,9 @@ async function handleApi(request, env, url) {
 
   if (entity === 'gumroad-webhook') return handleGumroad(request, env);
   if (entity === 'whatsapp-webhook') return handleWhatsapp(request, env);
+  if (!isAuthorizedApiRequest(request, env)) {
+    return json({ ok: false, error: 'unauthorized' }, env.CRM_API_TOKEN ? 401 : 503);
+  }
 
   if (entity === 'all' && request.method === 'GET') {
     return json({ ok: true, ...(await listAll(env)) });
@@ -119,12 +151,12 @@ async function handleApi(request, env, url) {
 }
 
 // Gumroad Ping posts application/x-www-form-urlencoded. We also accept JSON.
-// Optional shared secret: set WEBHOOK_SECRET and pass ?token=... on the Ping URL.
+// WEBHOOK_SECRET is required; pass it as ?token=... on the Ping URL.
 async function handleGumroad(request, env) {
   if (request.method !== 'POST') return json({ ok: false, error: 'POST only' }, 405);
 
   const url = new URL(request.url);
-  if (env.WEBHOOK_SECRET && url.searchParams.get('token') !== env.WEBHOOK_SECRET) {
+  if (!env.WEBHOOK_SECRET || !constantTimeEqual(url.searchParams.get('token') || '', env.WEBHOOK_SECRET)) {
     return json({ ok: false, error: 'unauthorized' }, 401);
   }
 
@@ -192,7 +224,7 @@ function classifyWhatsappLead(message) {
 // Meta calls this endpoint directly — no middleman workflow tool.
 // GET is the one-time verification handshake (WhatsApp → Configuration → Webhook).
 // POST delivers each inbound message event; must always ack fast with 200 or Meta retries.
-// Optional shared secret: set WEBHOOK_SECRET and append ?token=... to the Webhook URL you give Meta.
+// WEBHOOK_SECRET and WHATSAPP_APP_SECRET are required for message delivery.
 async function handleWhatsapp(request, env) {
   const url = new URL(request.url);
 
@@ -208,11 +240,24 @@ async function handleWhatsapp(request, env) {
 
   if (request.method !== 'POST') return json({ ok: false, error: 'method not allowed' }, 405);
 
-  if (env.WEBHOOK_SECRET && url.searchParams.get('token') !== env.WEBHOOK_SECRET) {
+  if (!env.WEBHOOK_SECRET || !constantTimeEqual(url.searchParams.get('token') || '', env.WEBHOOK_SECRET)) {
     return json({ ok: false, error: 'unauthorized' }, 401);
   }
 
-  const body = await request.json().catch(() => null);
+  if (!env.WHATSAPP_APP_SECRET) return json({ ok: false, error: 'webhook not configured' }, 503);
+  const rawBody = await request.text();
+  const signature = request.headers.get('x-hub-signature-256') || '';
+  const expectedSignature = `sha256=${await hmacHex(rawBody, env.WHATSAPP_APP_SECRET)}`;
+  if (!constantTimeEqual(signature, expectedSignature)) {
+    return json({ ok: false, error: 'unauthorized' }, 401);
+  }
+
+  let body;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    body = null;
+  }
   // Ack malformed/unrelated payloads (e.g. status callbacks) so Meta doesn't retry forever.
   if (!body || typeof body !== 'object') return json({ ok: true, ignored: true });
 
@@ -259,7 +304,8 @@ export default {
       try {
         return await handleApi(request, env, url);
       } catch (err) {
-        return json({ ok: false, error: String(err && err.message || err) }, 500);
+        console.error('CRM API request failed', err);
+        return json({ ok: false, error: 'internal server error' }, 500);
       }
     }
     // Non-API paths: serve the static frontend.

@@ -32,6 +32,8 @@ Separate surface from AP Ops, but reachable from the AP Ops UI and kept in the s
 
 Deployment target: **`crm.absolutelyplausible.com`** — a Cloudflare Worker (`absolutely-plausible-crm`) serves the static assets and the `/api/*` JSON API in one deploy; no build step.
 
+The CRM custom domain must remain behind Cloudflare Access. The Worker rejects CRUD API requests unless Cloud has added its authenticated-user header or a trusted client supplies `Authorization: Bearer CRM_API_TOKEN`. Set `CRM_API_TOKEN` with `wrangler secret put CRM_API_TOKEN` for non-browser clients.
+
 ## Dev
 
 ```bash
